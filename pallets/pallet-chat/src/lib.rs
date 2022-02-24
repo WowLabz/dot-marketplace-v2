@@ -171,38 +171,9 @@ pub mod pallet {
 			
 			Ok(())
 		}
-		
-		#[pallet::weight(100)]
-		pub fn mark_as_read(
-			origin: OriginFor<T>, 
-			message_id: u128, 
-			mode: bool
-		) -> DispatchResult {
-			// User authentication
-			let sender =  ensure_signed(origin)?;
-			// Ensure message id exists
-			ensure! (<MsgStorage<T>>::contains_key(&message_id),<Error<T>>::MessageDoesNotExist);
-			// Get the message from storage
-			let mut msg = Self::get_message(message_id.clone());
-			// Ensure if the sender is the one who's marking it 'as read'
-			ensure! (sender == msg.sender_id, <Error<T>>::UnauthorisedToClose);
-			// Only a replied message can be marked as read
-			ensure! (msg.status == Status::Replied, <Error<T>>::ReplyDoesNotExist);
-			// Making a copy of the receiver id
-			let receiver = msg.receiver_id.clone();
-			// Updating the status
-			msg.status = match mode {
-				true => Status::Closed,
-				false => Status::Replied
-			};
-			// Remove message from storage
-			if msg.status == Status::Closed {
-				<MsgStorage<T>>::remove(message_id);
-				Self::deposit_event(Event::MessageClosed(message_id, sender, receiver));
-			}
 
-			Ok(())
-		}
+	//TODO -> Mark as Read extrinsic for the reply to be acknowledged by the original sender and delete from storage
+		
 	}
 }
 

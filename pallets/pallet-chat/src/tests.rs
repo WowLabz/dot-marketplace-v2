@@ -88,9 +88,6 @@ fn test_reply_message(){
 			Error::<Test>::ReplyAlreadyExists,
 		);
 
-
-		
-
 	});
 
 	new_test_ext().execute_with(||{
@@ -110,70 +107,6 @@ fn test_reply_message(){
         );
 	
 	});
-}
-
-#[test]
-fn test_mark_as_read() {
-	new_test_ext().execute_with(||{
-
-		Chat::write_message(
-			Origin::signed(1),
-			2,
-			b"Hello there!".to_vec()
-		).unwrap();
-
-		assert_noop!(
-			Chat::mark_as_read(
-				Origin::signed(1),
-				0,
-				true
-			),
-			Error::<Test>::ReplyDoesNotExist
-		);
-
-		Chat::reply_message(
-			Origin::signed(2),
-			0,
-			b"How are you?".to_vec()
-		).unwrap();
-
-		assert_noop!(
-			Chat::mark_as_read(
-				Origin::none(),
-				0,
-				true
-			),
-			DispatchError::BadOrigin,			
-		);
-
-		assert_noop!(
-			Chat::mark_as_read(
-				Origin::signed(1),
-				1,
-				true
-			),
-			Error::<Test>::MessageDoesNotExist
-		);
-
-		assert_noop!(
-			Chat::mark_as_read(
-				Origin::signed(2),
-				0,
-				true
-			),
-			Error::<Test>::UnauthorisedToClose
-		);
-
-		assert_ok!(
-			Chat::mark_as_read(
-				Origin::signed(1),
-				0,
-				true
-			)
-		);
-	
-	});
-
 }
 
 #[test]
