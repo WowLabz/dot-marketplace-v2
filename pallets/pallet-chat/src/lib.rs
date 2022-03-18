@@ -13,15 +13,34 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-
+	// use log::{info, trace, warn};
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
+		log,
+        sp_runtime::traits::Hash,
         traits::{ 
+            Randomness, 
+            Currency, 
+            tokens::ExistenceRequirement, 
+            LockIdentifier, 
+            WithdrawReasons, 
             LockableCurrency 
         },
+		dispatch::{ EncodeLike },
+        transactional
     };
 	use sp_std::vec::Vec;
+	// use codec::{EncodeLike};
+
+	type AccountOf<T> = <T as frame_system::Config>::AccountId;
+	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+	// NOTE: Need to refactor, duplicate code for testing purposes
+	
+	type AccountId<T> = <T as frame_system::Config>::AccountId;
+	type Balance<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
 	
 	#[derive(Encode, Decode, Default, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	pub struct Message<AccountId> {
@@ -46,6 +65,7 @@ pub mod pallet {
 			}
 		}
 	}
+
 	
 	#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	pub enum Status {
@@ -73,7 +93,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_message_count)]
+    /// For storing the number of tasks
 	pub type MessageCount<T> = StorageValue<_, u128, ValueQuery>;
+
+	// #[pallet::storage]
+	// #[pallet::getter(fn get_message)]
+    // /// For storing the message details
+	// pub(super) type MessageStorage<T: Config> = StorageValue<_, Vec<Message<T::AccountId>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_message)]
@@ -86,6 +112,7 @@ pub mod pallet {
 		MessageCreated(u128,T::AccountId, T::AccountId),
 		MessageReplied(u128,T::AccountId, T::AccountId),
 		MessageClosed(u128,T::AccountId, T::AccountId),
+
 	 }
 
 	#[pallet::error]
@@ -106,24 +133,23 @@ pub mod pallet {
 		UnauthorisedToClose,
 		/// To make sure a reply exists
 		ReplyDoesNotExist
+		
+		
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 
 		#[pallet::weight(100)]
-		pub fn write_message(
-			origin: OriginFor<T>,
-			receiver: T::AccountId, 
-			message: Vec<u8>
-		) -> DispatchResult {
-			// User authentication
+		pub fn write_message(origin: OriginFor<T>,receiver: T::AccountId, message: Vec<u8>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			// Getting the total message count from storage
+			log::info!("$$$$$ Receiver ID:{:?}", receiver);
+
 			let message_count =  Self::get_message_count();
-			// Ensure sender id is not same as receiver id
+
+			// ensure sender id is not same as receiver id
 			ensure!(sender != receiver,<Error<T>>::ReceiverNotValid);
-			// Creating the message structure for storage
+
 			let msg = Message {
 				message_id: message_count,
 				sender_id: sender.clone(),
@@ -132,48 +158,95 @@ pub mod pallet {
 				reply: None,
 				status: Status::Active
 			};
-			// Writing the message to storage
-			<MsgStorage<T>>::insert(&message_count, msg.new());
-			// Incrementing the count
+
+			// // If mode = true, storagevalue element is called else storagemap
+			// if mode{
+			// 	let mut msg_details: Vec<Message<T::AccountId>> = Vec::new();
+			// 	msg_details.push(msg.new());
+				
+			// 	<MessageStorage<T>>::put(msg_details);
+				
+			// }
+			// else{
+				
+			<MsgStorage<T>>::insert(&message_count,msg);
+			
 			<MessageCount<T>>::put(message_count + 1);
-			// Notify event
+
 			Self::deposit_event(Event::MessageCreated(message_count,sender,receiver));
 
 			Ok(())
 		}
 
 		#[pallet::weight(100)]
-		pub fn reply_message(
-			origin: OriginFor<T>, 
-			message_id: u128, 
-			reply: Vec<u8>
-		) -> DispatchResult {
-			// User authentication
+		pub fn reply_message(origin: OriginFor<T>, message_id: u128, reply: Vec<u8>) -> DispatchResult {
 			let receiver = ensure_signed(origin)?;
-			// Ensure message id exists
+
+			//ensure message id exists
 			ensure! (<MsgStorage<T>>::contains_key(&message_id),<Error<T>>::MessageDoesNotExist);
-			// Get the message from storage
+
 			let mut msg = Self::get_message(message_id.clone());
-			// Ensure the recipient only replies
+
+			// ensure the recipient only replies
 			ensure! (receiver == msg.receiver_id,<Error<T>>::UnauthorisedToReply);
-			// Ensure check to make sure message is active
+
+			// ensure check to make sure message is active
 			ensure! (msg.status == Status::Active,<Error<T>>::ReplyAlreadyExists);
-			// Update reply from the user
+			
 			msg.reply = Some(reply);
-			// Update the status of the message
 			msg.status = Status::Replied;
-			// Making a copy of the sender id
+			
 			let original_sender = msg.sender_id.clone();
-			// Updating the message storage with the reply
+
+			// let mut reply_details: Vec<&Message<T::AccountId>> = Vec::new();
+			// reply_details.push(&msg);
+			// <MessageStorage<T>>::put(reply_details);
+
 			<MsgStorage<T>>::insert(&message_id,msg);
-			// Notify event
+	
 			Self::deposit_event(Event::MessageReplied( message_id, receiver, original_sender));
 			
 			Ok(())
+
+		}
+		
+		#[pallet::weight(100)]
+		pub fn mark_as_read(origin: OriginFor<T>, message_id: u128, mode: bool) -> DispatchResult {
+			
+			let sender =  ensure_signed(origin)?;
+
+			ensure! (<MsgStorage<T>>::contains_key(&message_id),<Error<T>>::MessageDoesNotExist);
+
+			let mut msg = Self::get_message(message_id.clone());
+
+			ensure! (sender == msg.sender_id,<Error<T>>::UnauthorisedToClose);
+
+			ensure! (msg.status == Status::Replied,<Error<T>>::ReplyDoesNotExist);
+
+			let receiver = msg.receiver_id.clone();
+
+			// if mode{
+			// 	msg.status = Status::Closed;
+			// }
+
+			msg.status = match mode{
+				true => Status::Closed,
+				false => Status::Replied
+			
+			};
+
+			if msg.status == Status::Closed{
+				<MsgStorage<T>>::remove(message_id);
+			}
+
+			Self::deposit_event(Event::MessageClosed(message_id, sender, receiver));
+
+			Ok(())
+
+
+
 		}
 
-	//TODO -> Mark as Read extrinsic for the reply to be acknowledged by the original sender and delete from storage
-		
 	}
 }
 
