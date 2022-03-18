@@ -13,7 +13,6 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-	// use log::{info, trace, warn};
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
@@ -31,16 +30,9 @@ pub mod pallet {
         transactional
     };
 	use sp_std::vec::Vec;
-	// use codec::{EncodeLike};
-
-	type AccountOf<T> = <T as frame_system::Config>::AccountId;
-	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
-	// NOTE: Need to refactor, duplicate code for testing purposes
 	
 	type AccountId<T> = <T as frame_system::Config>::AccountId;
 	type Balance<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
 	
 	#[derive(Encode, Decode, Default, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	pub struct Message<AccountId> {
@@ -66,7 +58,6 @@ pub mod pallet {
 		}
 	}
 
-	
 	#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	pub enum Status {
 		Active,
@@ -96,15 +87,9 @@ pub mod pallet {
     /// For storing the number of tasks
 	pub type MessageCount<T> = StorageValue<_, u128, ValueQuery>;
 
-	// #[pallet::storage]
-	// #[pallet::getter(fn get_message)]
-    // /// For storing the message details
-	// pub(super) type MessageStorage<T: Config> = StorageValue<_, Vec<Message<T::AccountId>>, ValueQuery>;
-
 	#[pallet::storage]
 	#[pallet::getter(fn get_message)]
 	pub(super) type MsgStorage<T: Config> = StorageMap<_, Blake2_128Concat, u128, Message<T::AccountId>, ValueQuery>;
-
 	
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -113,7 +98,7 @@ pub mod pallet {
 		MessageReplied(u128,T::AccountId, T::AccountId),
 		MessageClosed(u128,T::AccountId, T::AccountId),
 
-	 }
+	}
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -133,23 +118,24 @@ pub mod pallet {
 		UnauthorisedToClose,
 		/// To make sure a reply exists
 		ReplyDoesNotExist
-		
-		
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 
 		#[pallet::weight(100)]
-		pub fn write_message(origin: OriginFor<T>,receiver: T::AccountId, message: Vec<u8>) -> DispatchResult {
+		pub fn write_message(
+			origin: OriginFor<T>,
+			receiver: T::AccountId, 
+			message: Vec<u8>
+		) -> DispatchResult {
+			// User authentication.
 			let sender = ensure_signed(origin)?;
-			log::info!("$$$$$ Receiver ID:{:?}", receiver);
-
+			// Get message count.
 			let message_count =  Self::get_message_count();
-
-			// ensure sender id is not same as receiver id
+			// Ensure sender id is not same as receiver id.
 			ensure!(sender != receiver,<Error<T>>::ReceiverNotValid);
-
+			// Create message structure.
 			let msg = Message {
 				message_id: message_count,
 				sender_id: sender.clone(),
@@ -158,101 +144,102 @@ pub mod pallet {
 				reply: None,
 				status: Status::Active
 			};
-
-			// // If mode = true, storagevalue element is called else storagemap
-			// if mode{
-			// 	let mut msg_details: Vec<Message<T::AccountId>> = Vec::new();
-			// 	msg_details.push(msg.new());
-				
-			// 	<MessageStorage<T>>::put(msg_details);
-				
-			// }
-			// else{
-				
+			// Update message storage.
 			<MsgStorage<T>>::insert(&message_count,msg);
-			
+			// Update message count.
 			<MessageCount<T>>::put(message_count + 1);
-
-			Self::deposit_event(Event::MessageCreated(message_count,sender,receiver));
+			// Notification.
+			Self::deposit_event(
+				Event::MessageCreated(
+					message_count,
+					sender,
+					receiver
+				)
+			);
 
 			Ok(())
 		}
 
 		#[pallet::weight(100)]
-		pub fn reply_message(origin: OriginFor<T>, message_id: u128, reply: Vec<u8>) -> DispatchResult {
+		pub fn reply_message(
+			origin: OriginFor<T>, 
+			message_id: u128, 
+			reply: Vec<u8>
+		) -> DispatchResult {
+			// User authentication.
 			let receiver = ensure_signed(origin)?;
-
-			//ensure message id exists
+			// Ensure message id exists.
 			ensure! (<MsgStorage<T>>::contains_key(&message_id),<Error<T>>::MessageDoesNotExist);
-
+			// Get message.
 			let mut msg = Self::get_message(message_id.clone());
-
-			// ensure the recipient only replies
+			// Ensure the recipient only replies.
 			ensure! (receiver == msg.receiver_id,<Error<T>>::UnauthorisedToReply);
-
-			// ensure check to make sure message is active
+			// Ensure check to make sure message is active.
 			ensure! (msg.status == Status::Active,<Error<T>>::ReplyAlreadyExists);
 			
+			// ----- Updating reply and status
 			msg.reply = Some(reply);
 			msg.status = Status::Replied;
+			// -----
 			
+			// Cloning sender id.
 			let original_sender = msg.sender_id.clone();
-
-			// let mut reply_details: Vec<&Message<T::AccountId>> = Vec::new();
-			// reply_details.push(&msg);
-			// <MessageStorage<T>>::put(reply_details);
-
+			// Updating message storage with updated message.
 			<MsgStorage<T>>::insert(&message_id,msg);
-	
-			Self::deposit_event(Event::MessageReplied( message_id, receiver, original_sender));
+			// Notification.
+			Self::deposit_event(
+				Event::MessageReplied(
+					message_id, 
+					receiver, 
+					original_sender
+				)
+			);
 			
 			Ok(())
-
 		}
 		
 		#[pallet::weight(100)]
-		pub fn mark_as_read(origin: OriginFor<T>, message_id: u128, mode: bool) -> DispatchResult {
-			
+		pub fn mark_as_read(
+			origin: OriginFor<T>, 
+			message_id: u128, 
+			mode: bool
+		) -> DispatchResult {
+			// User authentication.
 			let sender =  ensure_signed(origin)?;
-
-			ensure! (<MsgStorage<T>>::contains_key(&message_id),<Error<T>>::MessageDoesNotExist);
-
+			// Ensure if message exists.
+			ensure!(
+				<MsgStorage<T>>::contains_key(&message_id),
+				<Error<T>>::MessageDoesNotExist
+			);
+			// Get message.
 			let mut msg = Self::get_message(message_id.clone());
-
+			// Ensure if original sender is the one reading the message.
 			ensure! (sender == msg.sender_id,<Error<T>>::UnauthorisedToClose);
-
+			// Ensure if msg was replied.
 			ensure! (msg.status == Status::Replied,<Error<T>>::ReplyDoesNotExist);
-
+			// Cloning receiver id
 			let receiver = msg.receiver_id.clone();
-
-			// if mode{
-			// 	msg.status = Status::Closed;
-			// }
-
-			msg.status = match mode{
+			// Update status.
+			msg.status = match mode {
 				true => Status::Closed,
 				false => Status::Replied
 			
 			};
-
-			if msg.status == Status::Closed{
+			// If status is closed remove msg from storage
+			if msg.status == Status::Closed {
 				<MsgStorage<T>>::remove(message_id);
 			}
-
-			Self::deposit_event(Event::MessageClosed(message_id, sender, receiver));
+			// Notification.
+			Self::deposit_event(
+				Event::MessageClosed(
+					message_id, 
+					sender, 
+					receiver
+				)
+			);
 
 			Ok(())
-
-
-
 		}
-
 	}
 }
-
-
-
-
-
-
 
