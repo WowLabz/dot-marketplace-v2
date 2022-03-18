@@ -1,5 +1,5 @@
 FROM paritytech/ci-linux:production
 
-WORKDIR /var/www/dot_marketplace_v2
-COPY . /var/www/dot_marketplace_v2
+WORKDIR /var/www/dot-marketplace-v2
+COPY . /var/www/dot-marketplace-v2
 EXPOSE 9944
