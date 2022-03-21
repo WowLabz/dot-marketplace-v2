@@ -92,9 +92,7 @@ A functional demo of the chat system flow \
 * >Video  walkthrough \
 A functional demo of the court system when a publisher disapproves a task\
 [Video demo in with polkadot.js explorer connected to the node](https://user-images.githubusercontent.com/58659064/159296018-f6cffc16-0fed-46b8-9c1b-142d04f45974.mp4)
-
-
-
+<br>
 
 To read about the working of the pallet please refer the guide [Description](https://github.com/WowLabz/dot-marketplace-v2/blob/main/README.md)
 
