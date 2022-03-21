@@ -1,6 +1,7 @@
 use node_template_runtime::{
-	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig,
-	SystemConfig, WASM_BINARY,
+	pallet_tasking::AccountDetails, pallet_tasking::TaskTypeTags, AccountId, AuraConfig, Balance,
+	BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig,
+	PalletTaskingConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -56,6 +57,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
@@ -130,6 +135,78 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
+	// 12 accounts
+	let accounts_to_map: Vec<AccountId> = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		get_account_id_from_seed::<sr25519::Public>("Dave"),
+		get_account_id_from_seed::<sr25519::Public>("Eve"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+	];
+
+	// 12 account details
+	let account_details: Vec<AccountDetails<Balance>> = vec![
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [3, 5, 4, 2, 4].to_vec(),
+			avg_rating: Some(4),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
+			sudo: false
+		},
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [3, 5, 5, 2, 5].to_vec(),
+			avg_rating: Some(4),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
+			sudo: false
+		},
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [4, 4, 4, 4, 4].to_vec(),
+			avg_rating: Some(4),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::WebDevelopment].to_vec(),
+			sudo: false
+		},
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [3, 1, 3, 2, 4].to_vec(),
+			avg_rating: Some(3),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::WebDevelopment].to_vec(),
+			sudo: false
+		},
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [3, 5, 5, 2, 5].to_vec(),
+			avg_rating: Some(4),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::WebDevelopment].to_vec(),
+			sudo: false
+		},
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [3, 3, 4, 5, 4].to_vec(),
+			avg_rating: Some(4),
+			tags: [TaskTypeTags::MachineLearning].to_vec(),
+			sudo: false
+		},
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [5, 5, 5, 5, 5].to_vec(),
+			avg_rating: Some(5),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
+			sudo: true
+		},
+		AccountDetails {
+			balance: 1 << 60,
+			ratings: [3, 5, 3, 3, 3].to_vec(),
+			avg_rating: Some(3),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
+			sudo: true
+		},
+	];
+
 	GenesisConfig {
 		system: SystemConfig {
 			// Add Wasm runtime to storage.
@@ -148,6 +225,14 @@ fn testnet_genesis(
 		sudo: SudoConfig {
 			// Assign network admin rights.
 			key: root_key,
+		},
+		pallet_tasking: PalletTaskingConfig {
+			// single_value: VALUE,
+			account_map: accounts_to_map
+				.iter()
+				.zip(account_details.iter())
+				.map(|(x, acc_details)| (x.clone(), acc_details.clone()))
+				.collect(),
 		},
 		transaction_payment: Default::default(),
 	}
