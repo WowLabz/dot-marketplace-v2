@@ -4856,7 +4856,7 @@ dependencies = [
 
 [[package]]
 name = "rsix"
-version = "0.23.9"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f64c5788d5aab8b75441499d99576a24eb09f76fb267b36fec7e3d970c66431"
 dependencies = [
