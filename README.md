@@ -204,9 +204,20 @@ First, complete the [basic Rust setup instructions](./doc/rust-setup.md).
 
 ### Run
 
-Use Rust's native `cargo` command to build and launch the template node:
+Use Rust's native `cargo` command to build and launch the template node: 
+Note : The current build is supported by Rust Nightly `1.58.0-nightly` due to its dependency on a specific crate used in this codebase.
+Please update the rust version accordingly to run the build.
 
 ```sh
+rustup update
+
+# installing rust version 1.58.0-nightly
+rustup install nightly-2021-11-01
+
+# setting rust default version as 1.58.0-nightly
+rustup default nightly-2021-11-01
+
+# run the node
 cargo run --release -- --dev --tmp
 ```
 
