@@ -60,17 +60,17 @@ pub mod pallet {
 
 	#[derive(Encode, Decode, Default, Debug, PartialEq, Clone, Eq, TypeInfo)]
 	pub struct TaskDetails<AccountId, Balance> {
-		task_id: u128,
-		publisher: AccountId,
-		worker_id: Option<AccountId>,
-		publisher_name: Option<Vec<u8>>,
-		worker_name: Option<Vec<u8>>,
-		task_tags: Vec<TaskTypeTags>,
-		task_deadline: u64,
-		cost: Balance,
-		status: Status,
-		task_description: Vec<u8>,
-		attachments: Option<Vec<Vec<u8>>>
+		pub task_id: u128,
+		pub publisher: AccountId,
+		pub worker_id: Option<AccountId>,
+		pub publisher_name: Option<Vec<u8>>,
+		pub worker_name: Option<Vec<u8>>,
+		pub task_tags: Vec<TaskTypeTags>,
+		pub task_deadline: u64,
+		pub cost: Balance,
+		pub status: Status,
+		pub task_description: Vec<u8>,
+		pub attachments: Option<Vec<Vec<u8>>>
 	}
 
 	#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
