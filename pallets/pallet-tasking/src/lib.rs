@@ -17,28 +17,19 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
-		log,
-        sp_runtime::traits::Hash,
         traits::{ 
-            Randomness, 
             Currency, 
             tokens::ExistenceRequirement, 
             LockIdentifier, 
             WithdrawReasons, 
             LockableCurrency 
         },
-		dispatch::{ EncodeLike },
-        transactional
     };
 	use sp_std::vec::Vec;
 	// use codec::{EncodeLike};
 
-	type AccountOf<T> = <T as frame_system::Config>::AccountId;
+	// type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
-	// NOTE: Need to refactor, duplicate code for testing purposes
-	type AccountId<T> = <T as frame_system::Config>::AccountId;
-	type Balance<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	pub const LOCKSECRET: LockIdentifier = *b"mylockab";
 
