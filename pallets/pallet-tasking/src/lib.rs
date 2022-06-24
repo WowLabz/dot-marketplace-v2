@@ -20,7 +20,6 @@ pub mod pallet {
 	use frame_support::PalletId;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
-		sp_runtime,
 		sp_runtime::traits::{AccountIdConversion, SaturatedConversion,},
 		traits::{
 			tokens::ExistenceRequirement, Currency, LockableCurrency,

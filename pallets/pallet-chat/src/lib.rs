@@ -16,23 +16,14 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
-		log,
-        sp_runtime::traits::Hash,
         traits::{ 
-            Randomness, 
-            Currency, 
-            tokens::ExistenceRequirement, 
-            LockIdentifier, 
-            WithdrawReasons, 
             LockableCurrency 
         },
-		dispatch::{ EncodeLike },
-        transactional
     };
 	use sp_std::vec::Vec;
 	
-	type AccountId<T> = <T as frame_system::Config>::AccountId;
-	type Balance<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	// type AccountId<T> = <T as frame_system::Config>::AccountId;
+	// type Balance<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	
 	#[derive(Encode, Decode, Default, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	pub struct Message<AccountId> {
@@ -46,7 +37,7 @@ pub mod pallet {
 	}
 
 	impl<AccountId> Message<AccountId>{
-		fn new(self) -> Self {
+		fn _new(self) -> Self {
 			Self {
 				message_id: self.message_id,
 				sender_id: self.sender_id,
