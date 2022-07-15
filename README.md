@@ -230,6 +230,13 @@ without launching it:
 cargo build --release
 ```
 
+### Tests
+
+Test cases can be run using the following command.
+```sh
+cargo test
+``` 
+
 ### Embedded Docs
 
 Once the project has been built, the following command can be used to explore all parameters and
