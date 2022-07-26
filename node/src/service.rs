@@ -37,6 +37,7 @@ type FullClient =
 type FullBackend = sc_service::TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
+#[allow(clippy::type_complexity)]
 pub fn new_partial(
 	config: &Configuration,
 ) -> Result<
@@ -60,7 +61,7 @@ pub fn new_partial(
 	ServiceError,
 > {
 	if config.keystore_remote.is_some() {
-		return Err(ServiceError::Other(format!("Remote Keystores are not supported.")))
+		return Err(ServiceError::Other("Remote Keystores are not supported.".to_string()))
 	}
 
 	let telemetry = config
@@ -82,7 +83,7 @@ pub fn new_partial(
 
 	let (client, backend, keystore_container, task_manager) =
 		sc_service::new_full_parts::<Block, RuntimeApi, _>(
-			&config,
+			config,
 			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
 			executor,
 		)?;
@@ -149,7 +150,7 @@ pub fn new_partial(
 	})
 }
 
-fn remote_keystore(_url: &String) -> Result<Arc<LocalKeystore>, &'static str> {
+fn remote_keystore(_url: &str) -> Result<Arc<LocalKeystore>, &'static str> {
 	// FIXME: here would the concrete keystore be built,
 	//        must return a concrete type (NOT `LocalKeystore`) that
 	//        implements `CryptoStore` and `SyncCryptoStore`
@@ -257,7 +258,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 		let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _, _>(
 			StartAuraParams {
 				slot_duration,
-				client: client.clone(),
+				client,
 				select_chain,
 				block_import,
 				proposer_factory,

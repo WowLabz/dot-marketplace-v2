@@ -2,6 +2,7 @@
 
 use parity_scale_codec::alloc::string::ToString;
 use sp_std::vec::Vec;
+#[allow(unused_imports)]
 use num_traits::float::Float;
 
 pub fn dot_shuffle<T>(
@@ -28,7 +29,7 @@ pub fn dot_shuffle<T>(
         );
         // * Index should be less than the length of the vector
         if random_number_idx > input.len() as u32 - 1 {
-            random_number_idx = random_number_idx - 1;
+            random_number_idx -= 1;
         }
         // * As input will decrease along with it the length should too
         length -= 1;

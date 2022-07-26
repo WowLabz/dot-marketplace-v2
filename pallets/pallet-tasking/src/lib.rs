@@ -31,6 +31,8 @@ pub mod pallet {
 	use codec::{Decode, Encode};
 	use sp_std::collections::btree_map::BTreeMap;
 	use sp_std::vec::Vec;
+	use sp_std::cmp::Ordering;
+	
 	use crate::utils::{dot_shuffle,roundoff};
 
 	type Item<T> = <T as frame_system::Config>::AccountId;
@@ -172,8 +174,8 @@ pub mod pallet {
 			for item in list.iter() {
 				total_sum += item;
 			}
-			let average = roundoff(total_sum, list_len);
-			average
+			
+			roundoff(total_sum, list_len)
 		}
 	}
 
@@ -367,9 +369,9 @@ pub mod pallet {
 			// Sudo juror authentication
 			let sudo_juror = ensure_signed(origin)?;
 			// Does task exist?
-			ensure!(<TaskStorage<T>>::contains_key(task_id.clone()), <Error<T>>::TaskDoesNotExist);
+			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 			// Get task details using task id
-			let mut task_details = Self::task(task_id.clone());
+			let mut task_details = Self::task(task_id);
 			// Accessing dispute details of the task
 			let mut dispute_details = task_details.dispute.clone().unwrap();
 			// Only the selected sudo juror can complete the case
@@ -383,9 +385,9 @@ pub mod pallet {
 			// Updating the final jurors map
 			dispute_details.final_jurors.insert(sudo_juror.clone(), juror_details);
 			// Accessing number of votes for the publisher
-			let mut votes_for_customer = dispute_details.votes_for_customer.clone().unwrap_or(0);
+			let mut votes_for_customer = dispute_details.votes_for_customer.unwrap_or(0);
 			// Accessing number of votes for the worker
-			let mut votes_for_worker = dispute_details.votes_for_worker.clone().unwrap_or(0);
+			let mut votes_for_worker = dispute_details.votes_for_worker.unwrap_or(0);
 			
 			// ------ Allocating the vote to the respective party
 			match voted_for {
@@ -403,9 +405,9 @@ pub mod pallet {
 			// Adding the dispute details to task details structure
 			task_details.dispute = Some(dispute_details);
 			// Updating the task details storage
-			<TaskStorage<T>>::insert(task_id.clone(), task_details);
+			<TaskStorage<T>>::insert(task_id, task_details);
 			// Concluding the case
-			Self::adjourn_court(task_id.clone());
+			Self::adjourn_court(task_id);
 			// Notify event
 			Self::deposit_event(Event::CaseClosedBySudoJuror(task_id, sudo_juror));
 			
@@ -424,13 +426,13 @@ pub mod pallet {
 			// Ensure task exists and is active
 			ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 			// Get task details from storage
-			let task_details = Self::task(task_id.clone());
+			let task_details = Self::task(task_id);
 			// Accessing status from task details
 			let status = task_details.status.clone();
 
 			// ----- Checking if the signer is the customer / worker
 			if user_type == UserType::Customer {
-				ensure!(task_details.publisher.clone() == who, <Error<T>>::UnauthorisedToRaiseDispute);
+				ensure!(task_details.publisher == who, <Error<T>>::UnauthorisedToRaiseDispute);
 			} else if user_type == UserType::Worker {
 				ensure!(task_details.worker_id.clone().unwrap() == who, <Error<T>>::UnauthorisedToRaiseDispute);
 			}
@@ -445,7 +447,7 @@ pub mod pallet {
 			// Cannot raise dispute during voting period
 			ensure!(status != Status::VotingPeriod, <Error<T>>::DisputeAlreadyRaised);
 			// Register the case
-			Self::register_case(task_id.clone(), task_details);
+			Self::register_case(task_id, task_details);
 			// Customer against worker & vice-versa
 			let against = match user_type {
 				UserType::Customer => Reason::AgaisntWorker,
@@ -468,7 +470,7 @@ pub mod pallet {
 			// Ensure task exists and is active
 			ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 			// Get task details from storage
-			let task_details = Self::task(task_id.clone());
+			let task_details = Self::task(task_id);
 			// Accessing status from task details
 			let status = task_details.status.clone();
 			// Ensuring if publisher hasn't provided ratings to the worker
@@ -480,7 +482,7 @@ pub mod pallet {
 			}
 			
 			// Regsiter case with the court
-			Self::register_case(task_id.clone(), task_details);
+			Self::register_case(task_id, task_details);
 			// Show reason respective to the caller
 			let reason = match user_type {
 				UserType::Customer => Reason::UnsatisfiedPublisherRating,
@@ -499,7 +501,7 @@ pub mod pallet {
 			// Ensure task exists and is active
 			ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 			// Getting task details from storage
-			let task_details = Self::task(task_id.clone());
+			let task_details = Self::task(task_id);
 			// Accessing status from task details
 			let status = task_details.status.clone();
 			// Accessing publisher id from task details
@@ -509,7 +511,7 @@ pub mod pallet {
 			// Ensure the customer is the one disapproving the task
 			ensure!(publisher == customer, <Error<T>>::UnauthorisedToDisapprove);
 			// Register the case in court
-			Self::register_case(task_id.clone(), task_details);
+			Self::register_case(task_id, task_details);
 			// Notify event
 			Self::deposit_event(Event::CourtSummoned(
 				task_id,
@@ -528,7 +530,7 @@ pub mod pallet {
 			// Ensure task exists and is active
 			ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 			// Getting task details from storage
-			let mut task_details = Self::task(task_id.clone());
+			let mut task_details = Self::task(task_id);
 			// Ensuring if dispute is raised
 			ensure!(task_details.dispute != None, <Error<T>>::DisputeDoesNotExist);
 			// Accessing the dispute details related to the task 
@@ -536,7 +538,7 @@ pub mod pallet {
 
 			// ----- To stop accepting participants for jury after elapsed time
 			let current_period = <frame_system::Pallet<T>>::block_number();
-			let jury_acceptance_period = dispute_details.jury_acceptance_period.clone();
+			let jury_acceptance_period = dispute_details.jury_acceptance_period;
 			ensure!(
 				current_period < jury_acceptance_period,
 				<Error<T>>::JurySelectionPeriodElapsed
@@ -558,7 +560,7 @@ pub mod pallet {
 			// Adding the dispute details to task details structure
 			task_details.dispute = Some(dispute_details);
 			// Notify event
-			Self::deposit_event(Event::NewJurorAdded(task_id.clone(), juror));
+			Self::deposit_event(Event::NewJurorAdded(task_id, juror));
 			// Updating task details storage
 			<TaskStorage<T>>::insert(&task_id, task_details);
 
@@ -578,7 +580,7 @@ pub mod pallet {
 			// Ensure task exists and is active
 			ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 			// Getting task details from storage
-			let mut task_details = Self::task(task_id.clone());
+			let mut task_details = Self::task(task_id);
 			// Ensuring if dispute is raised
 			ensure!(task_details.dispute != None, <Error<T>>::DisputeDoesNotExist);
 			// Accessing the dispute details related to the task 
@@ -586,7 +588,7 @@ pub mod pallet {
 			
 			// ----- To stop jurors to vote before the actual voting period
 			let current_period = <frame_system::Pallet<T>>::block_number();
-			let jury_acceptance_period = dispute_details.jury_acceptance_period.clone();
+			let jury_acceptance_period = dispute_details.jury_acceptance_period;
 			ensure!(current_period > jury_acceptance_period, <Error<T>>::JurySelectionInProcess);
 			// -----
 
@@ -628,7 +630,7 @@ pub mod pallet {
 			// Updating the task details storage
 			<TaskStorage<T>>::insert(&task_id, task_details);
 			// Notify event
-			Self::deposit_event(Event::VoteRecorded(task_id.clone(),juror));
+			Self::deposit_event(Event::VoteRecorded(task_id,juror));
 
 			Ok(())
 		}
@@ -647,42 +649,42 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			// Fetching the latest task count
 			let current_task_count = Self::get_task_count();
-			let escrow_id = Self::escrow_account_id(current_task_count.clone() as u32);
+			let escrow_id = Self::escrow_account_id(current_task_count as u32);
 			// Locking the amount from the publisher for the task
 			T::Currency::transfer(
 				&who,
 				&escrow_id,
-				task_cost.clone(),
+				task_cost,
 				ExistenceRequirement::KeepAlive,
 			)?;
 			// Details related to task created for storage
 			let task_details = TaskDetails {
-				task_id: current_task_count.clone(),
+				task_id: current_task_count,
 				publisher: who.clone(),
 				worker_id: None,
 				publisher_name: Some(publisher_name.clone()),
 				worker_name: None,
-				task_tags: task_tags.clone(),
-				task_deadline: task_duration.clone(),
-				cost: task_cost.clone(),
+				task_tags,
+				task_deadline: task_duration,
+				cost: task_cost,
 				status: Default::default(),
 				task_description: task_des.clone(),
-				publisher_attachments: publisher_attachments.clone(),
+				publisher_attachments,
 				worker_attachments: None,
 				dispute: None,
 				final_worker_rating: None,
 				final_customer_rating: None,
 			};
 			// Inserting the new task details to storage
-			<TaskStorage<T>>::insert(current_task_count.clone(), task_details);
+			<TaskStorage<T>>::insert(current_task_count, task_details);
 			// Notify event
 			Self::deposit_event(Event::TaskCreated(
 				who,
-				publisher_name.clone(),
-				current_task_count.clone(),
-				task_duration.clone(),
-				task_cost.clone(),
-				task_des.clone(),
+				publisher_name,
+				current_task_count,
+				task_duration,
+				task_cost,
+				task_des,
 			));
 			// Incrementing the task count in storage
 			<TaskCount<T>>::put(current_task_count + 1);
@@ -701,18 +703,18 @@ pub mod pallet {
 			// Does task exists?
 			ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 			// Getting task details
-			let mut task = Self::task(task_id.clone());
+			let mut task = Self::task(task_id);
 			// Accessing task cost
-			let task_cost = task.cost.clone();
+			let task_cost = task.cost;
 			// Is there balance to bid?
 			ensure!(
-				T::Currency::free_balance(&bidder.clone()) > task_cost,
+				T::Currency::free_balance(&bidder) > task_cost,
 				<Error<T>>::NotEnoughBalanceToBid
 			);
 			// Accessing publisher
 			let publisher = task.publisher.clone();
 			// Is publisher the bidder?
-			ensure!(publisher != bidder.clone(), <Error<T>>::UnauthorisedToBid);
+			ensure!(publisher != bidder, <Error<T>>::UnauthorisedToBid);
 			// Accessing task status
 			let status = task.status.clone();
 			// Is task open?
@@ -724,22 +726,22 @@ pub mod pallet {
 			// Updating status of task
 			task.status = Status::InProgress;
 			// Inserting updated task in storage
-			<TaskStorage<T>>::insert(&task_id, task.clone());
+			<TaskStorage<T>>::insert(&task_id, task);
 			// Getting escrow a/c id
-			let escrow_id = Self::escrow_account_id(task_id.clone() as u32);
+			let escrow_id = Self::escrow_account_id(task_id as u32);
 			// Locking the amount from the publisher for the task
 			T::Currency::transfer(
 				&bidder,
 				&escrow_id,
 				// NOTE: Have to add te amount bid by the worker and not task cost
-				task_cost.clone(),
+				task_cost,
 				ExistenceRequirement::KeepAlive,
 			)?;
 			// Notify event
 			Self::deposit_event(Event::TaskIsBid(
-				task_id.clone(),
-				bidder.clone(),
-				worker_name.clone(),
+				task_id,
+				bidder,
+				worker_name,
 			));
 
 			Ok(())
@@ -754,9 +756,9 @@ pub mod pallet {
 			// User authentication
 			let bidder = ensure_signed(origin)?;
 			// Does task exist?
-			ensure!(<TaskStorage<T>>::contains_key(task_id.clone()), <Error<T>>::TaskDoesNotExist);
+			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 			// Get task details from storage
-			let mut task = Self::task(task_id.clone());
+			let mut task = Self::task(task_id);
 			// Accessing task status
 			let status = task.status;
 			// Is task in progress?
@@ -764,17 +766,17 @@ pub mod pallet {
 			// Checking if worker is set or not
 			let worker = task.worker_id.clone().ok_or(<Error<T>>::WorkerNotSet)?;
 			// Is worker the biider?
-			ensure!(worker == bidder.clone(), <Error<T>>::UnauthorisedToComplete);
+			ensure!(worker == bidder, <Error<T>>::UnauthorisedToComplete);
 			// Updating the status
 			task.status = Status::PendingApproval;
 			// Attaching the prrof of work from worker
 			task.worker_attachments = Some(worker_attachments);
 			// Inserting the updated task details
-			<TaskStorage<T>>::insert(&task_id, task.clone());
+			<TaskStorage<T>>::insert(&task_id, task);
 			// Notify event
 			Self::deposit_event(Event::TaskCompleted(
-				task_id.clone(),
-				worker.clone(),
+				task_id,
+				worker,
 			));
 
 			Ok(())
@@ -789,9 +791,9 @@ pub mod pallet {
 			// User authentication
 			let publisher = ensure_signed(origin)?;
 			// Does task exist?
-			ensure!(<TaskStorage<T>>::contains_key(task_id.clone()), <Error<T>>::TaskDoesNotExist);
+			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 			// Getting task details from storage
-			let mut task = Self::task(task_id.clone());
+			let mut task = Self::task(task_id);
 			// Accessing task status
 			let status = task.status;
 			// Is approval pending?
@@ -799,18 +801,18 @@ pub mod pallet {
 			// Accessing publisher
 			let approver = task.publisher.clone();
 			// Is publisher the approver?
-			ensure!(publisher == approver.clone(), <Error<T>>::UnauthorisedToApprove);
+			ensure!(publisher == approver, <Error<T>>::UnauthorisedToApprove);
 			// Update the final rating for the worker
-			task.final_worker_rating = Some(rating_for_the_worker.clone());			
+			task.final_worker_rating = Some(rating_for_the_worker);			
 			// Updating task status
 			task.status = Status::CustomerRatingPending;
 			// Inserting updated task into storage
-			<TaskStorage<T>>::insert(&task_id, task.clone());
+			<TaskStorage<T>>::insert(&task_id, task);
 			// Notify event
 			Self::deposit_event(
 				Event::TaskApproved(
-					task_id.clone(), 
-					publisher.clone()
+					task_id, 
+					publisher
 				));
 
 			Ok(())
@@ -825,9 +827,9 @@ pub mod pallet {
 			// User authentication
 			let bidder = ensure_signed(origin)?;
 			// Does task exist?
-			ensure!(<TaskStorage<T>>::contains_key(task_id.clone()), <Error<T>>::TaskDoesNotExist);
+			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 			// Getting task details from storage
-			let mut task = Self::task(task_id.clone());
+			let mut task = Self::task(task_id);
 			// Accessing status
 			let status = task.status;
 			// Is rating pending from worker to publisher?
@@ -835,11 +837,11 @@ pub mod pallet {
 			// Get worker id
 			let worker = task.worker_id.clone().ok_or(<Error<T>>::WorkerNotSet)?;
 			// Is worker the bidder?
-			ensure!(worker == bidder.clone(), <Error<T>>::UnauthorisedToProvideCustomerRating);
+			ensure!(worker == bidder, <Error<T>>::UnauthorisedToProvideCustomerRating);
 			// Accessing reference of the publisher
 			let customer = &task.publisher;
 			// Update final rating for the customer
-			task.final_customer_rating = Some(rating_for_customer.clone());
+			task.final_customer_rating = Some(rating_for_customer);
 			// Update task status
 			task.status = Status::CustomerRatingProvided;
 			// Update task storage
@@ -847,8 +849,8 @@ pub mod pallet {
 			// Notify event
 			Self::deposit_event(
 				Event::CustomerRatingProvided(
-					task_id.clone(),
-					bidder.clone(),
+					task_id,
+					bidder,
 					rating_for_customer,
 					customer.clone()
 				));
@@ -864,9 +866,9 @@ pub mod pallet {
 			// User authentication
 			let publisher = ensure_signed(origin)?;
 			// Does task exist?
-			ensure!(<TaskStorage<T>>::contains_key(task_id.clone()), <Error<T>>::TaskDoesNotExist);
+			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 			// Getting task details from storage
-			let mut task_details = Self::task(task_id.clone());
+			let mut task_details = Self::task(task_id);
 			// Accessing task status
 			let status = task_details.status;
 			// Is approval pending?
@@ -874,11 +876,11 @@ pub mod pallet {
 			// Accessing publisher
 			let approver = task_details.publisher.clone();
 			// Is publisher the approver?
-			ensure!(publisher == approver.clone(), <Error<T>>::UnauthorisedToApprove);
+			ensure!(publisher == approver, <Error<T>>::UnauthorisedToApprove);
 			// Accessing worker id
 			let worker_id = task_details.worker_id.clone().unwrap();
 			// Fetching escrow a/c id
-			let escrow_id = Self::escrow_account_id(task_id.clone() as u32);
+			let escrow_id = Self::escrow_account_id(task_id as u32);
 			// Getting balance from the escrow a/c
 			let transfer_amount = T::Currency::free_balance(&escrow_id);
 			// Making the transfer to the worker
@@ -894,11 +896,11 @@ pub mod pallet {
 			// ----- Update overall customer and worker ratings 
 			<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
 				publisher.clone(), 
-				task_details.final_customer_rating.clone().unwrap()
+				task_details.final_customer_rating.unwrap()
 			);
 			<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
 				task_details.worker_id.clone().unwrap(), 
-				task_details.final_worker_rating.clone().unwrap()
+				task_details.final_worker_rating.unwrap()
 			);
 			// -----
 			
@@ -909,9 +911,9 @@ pub mod pallet {
 			Self::deposit_event(Event::AmountTransfered(
 				publisher,
 				worker_id,
-				transfer_amount.clone(),
+				transfer_amount,
 			));
-			Self::deposit_event(Event::TaskClosed(task_id.clone()));
+			Self::deposit_event(Event::TaskClosed(task_id));
 			// -----
 
 			Ok(())
@@ -928,7 +930,7 @@ pub mod pallet {
 			// Get total balance of sender
 			let sender_account_balance = T::Currency::total_balance(&sender);
 			// Verify if sender's balance is greater than transfer amount
-			let is_valid_to_transfer = sender_account_balance.clone() < transfer_amount.clone();
+			let is_valid_to_transfer = sender_account_balance < transfer_amount;
 			// Is the transfer valid based on the sender's balance
 			ensure!(!is_valid_to_transfer, <Error<T>>::NotEnoughBalance);
 			// Get account balance of receiver
@@ -946,11 +948,11 @@ pub mod pallet {
 			// Preparing the transfer details structure
 			let transfer_details = TransferDetails {
 				transfer_from: sender.clone(),
-				from_before: sender_account_balance.clone(),
-				from_after: updated_sender_account_balance.clone(),
+				from_before: sender_account_balance,
+				from_after: updated_sender_account_balance,
 				transfer_to: to.clone(),
-				to_before: to_account_balance.clone(),
-				to_after: updated_to_account_balance.clone(),
+				to_before: to_account_balance,
+				to_after: updated_to_account_balance,
 			};
 			// Updating the vector with transfer details
 			details.push(transfer_details);
@@ -958,12 +960,12 @@ pub mod pallet {
 			<Transfers<T>>::put(details);
 			// Notify event
 			Self::deposit_event(Event::TransferMoney(
-				sender.clone(),
-				sender_account_balance.clone(),
-				updated_sender_account_balance.clone(),
-				to.clone(),
-				to_account_balance.clone(),
-				updated_to_account_balance.clone(),
+				sender,
+				sender_account_balance,
+				updated_sender_account_balance,
+				to,
+				to_account_balance,
+				updated_to_account_balance,
 			));
 
 			Ok(())
@@ -980,11 +982,11 @@ pub mod pallet {
 			let mut total_publisher_rating: u8 = 0;
 			let mut total_worker_rating: u8 = 0;
 			let mut winner_account_id: Vec<T::AccountId> = Vec::new();
-			let mut task_details = Self::task(task_id.clone());
+			let mut task_details = Self::task(task_id);
 			let mut dispute_details = task_details.dispute.clone().unwrap();
 			let worker_id = task_details.worker_id.clone().unwrap();
 			let publisher_id = task_details.publisher.clone();
-			let escrow_id = Self::escrow_account_id(task_id.clone() as u32);
+			let escrow_id = Self::escrow_account_id(task_id as u32);
 			let votes_for_customer: u8 = dispute_details.votes_for_customer.unwrap_or(0);
 			let votes_for_worker: u8 = dispute_details.votes_for_worker.unwrap_or(0);
 			let mut is_active = true;
@@ -1006,27 +1008,36 @@ pub mod pallet {
 				// -----
 
 				// Calculating average publisher rating
-				let avg_publisher_rating = roundoff(total_publisher_rating, final_jurors_count.clone());
+				let avg_publisher_rating = roundoff(total_publisher_rating, final_jurors_count);
 				// Updating average publisher rating
 				dispute_details.avg_publisher_rating = Some(avg_publisher_rating);
 				// Calculating average worker rating
-				let avg_worker_rating = roundoff(total_worker_rating, final_jurors_count.clone());
+				let avg_worker_rating = roundoff(total_worker_rating, final_jurors_count);
 				// Updating average worker rating
 				dispute_details.avg_worker_rating = Some(avg_worker_rating);
 
 				// ----- Deciding the winner based on votes
-				if votes_for_customer > votes_for_worker {
-					dispute_details.winner = Some(UserType::Customer);
-				} else if votes_for_customer < votes_for_worker {
-					dispute_details.winner = Some(UserType::Worker);
-				} else {
-					// * If votes are even and if no one votes
-					dispute_details.winner = None;
+
+				match votes_for_customer.cmp(&votes_for_worker) {
+					Ordering::Greater => dispute_details.winner = Some(UserType::Customer),
+					Ordering::Less => dispute_details.winner = Some(UserType::Worker),
+					Ordering::Equal => dispute_details.winner = None, // If votes are equal.
+					#[allow(unreachable_patterns)]
+					_ => dispute_details.winner = None // If no one votes.
 				}
+
+				// if votes_for_customer > votes_for_worker {
+				// 	dispute_details.winner = Some(UserType::Customer);
+				// } else if votes_for_customer < votes_for_worker {
+				// 	dispute_details.winner = Some(UserType::Worker);
+				// } else {
+				// 	// * If votes are even and if no one votes
+				// 	dispute_details.winner = None;
+				// }
 				// -----
 
 				// ----- Updating the winner a/c id vector with respective publisher & worker ids
-				match dispute_details.winner.clone() {
+				match dispute_details.winner {
 					Some(UserType::Customer) => {
 						winner_account_id.push(worker_id.clone());
 						winner_account_id.push(publisher_id.clone());
@@ -1050,7 +1061,7 @@ pub mod pallet {
 				let remaining_amount;
 
 				// Court commision calculation
-				let court_fee = (task_cost_converted * 60) / 100 as u128;
+				let court_fee = (task_cost_converted * 60) / 100_u128;
 				// Individial juror fee calculation
 				let juror_fee: u32 = (court_fee as u32) / (final_jurors_count as u32);
 				// Collecting juror accounts
@@ -1065,7 +1076,7 @@ pub mod pallet {
 					).ok()?;
 				}
 				// Total amount excluding court fees
-				remaining_amount = (task_cost_converted * 140) / 100 as u128;
+				remaining_amount = (task_cost_converted * 140) / 100_u128;
 				// Convert remaining amount to u32
 				let mut remaining_amount_converted = remaining_amount as u32;
 
@@ -1094,18 +1105,18 @@ pub mod pallet {
 					ExistenceRequirement::AllowDeath,
 				).ok()?;
 				// Update final worker rating
-				task_details.final_worker_rating = dispute_details.avg_worker_rating.clone();
+				task_details.final_worker_rating = dispute_details.avg_worker_rating;
 				// Update final customer rating 
-				task_details.final_customer_rating = dispute_details.avg_publisher_rating.clone();
+				task_details.final_customer_rating = dispute_details.avg_publisher_rating;
 
 				// ----- Update overall customer and worker ratings 
 				<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
-					publisher_id.clone(), 
-					task_details.final_customer_rating.clone().unwrap()
+					publisher_id, 
+					task_details.final_customer_rating.unwrap()
 				);
 				<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
-					worker_id.clone(), 
-					task_details.final_worker_rating.clone().unwrap()
+					worker_id, 
+					task_details.final_worker_rating.unwrap()
 				);
 				// -----
 
@@ -1118,7 +1129,7 @@ pub mod pallet {
 				// Notofy event
 				Self::deposit_event(
 					Event::CourtAdjourned(
-						task_id.clone()
+						task_id
 					)
 				);
 
@@ -1178,7 +1189,7 @@ pub mod pallet {
 			for hearing in hearings.iter_mut() {
 				// For stopping unlimited court reinitiations
 				if hearing.trial_number >= 3 {
-					let mut task_details = Self::task(hearing.task_id.clone());
+					let mut task_details = Self::task(hearing.task_id);
 					let mut dispute_details = task_details.dispute.clone().unwrap();
 					dispute_details.sudo_juror = Some(Self::pick_sudo_juror(task_details.publisher.clone(), task_details.worker_id.clone().unwrap()));
 					task_details.dispute = Some(dispute_details);
@@ -1187,15 +1198,15 @@ pub mod pallet {
 				}
 				// * For jury acceptance period
 				else if block_number == hearing.jury_acceptance_period {
-					let mut task_details = Self::task(hearing.task_id.clone());
+					let mut task_details = Self::task(hearing.task_id);
 					let mut dispute_details = task_details.dispute.clone().unwrap();
-					if dispute_details.final_jurors.len() == 0 {
+					if dispute_details.final_jurors.is_empty() {
 						hearing.jury_acceptance_period += 5u128.saturated_into();
 						hearing.total_case_period += 5u128.saturated_into();
 						hearing.trial_number += 1;
 						task_details.status = Status::DisputeRaised;
-						dispute_details.jury_acceptance_period = hearing.jury_acceptance_period.clone();
-						dispute_details.total_case_period = hearing.total_case_period.clone();
+						dispute_details.jury_acceptance_period = hearing.jury_acceptance_period;
+						dispute_details.total_case_period = hearing.total_case_period;
 						dispute_details.potential_jurors = Self::potential_jurors(task_details.clone());
 						task_details.dispute = Some(dispute_details);
 					} else {
@@ -1206,7 +1217,7 @@ pub mod pallet {
 				} 
 				// * For total case period
 				else if block_number == hearing.total_case_period {
-					let mut task_details = Self::task(hearing.task_id.clone());
+					let mut task_details = Self::task(hearing.task_id);
 					let mut dispute_details = task_details.dispute.clone().unwrap();
 					let total_votes = dispute_details.votes_for_worker.unwrap_or(0) + dispute_details.votes_for_customer.unwrap_or(0);
 					if total_votes == 0 {
@@ -1214,11 +1225,11 @@ pub mod pallet {
 						hearing.total_case_period += 5u128.saturated_into();
 						hearing.trial_number += 1;
 						task_details.status = Status::DisputeRaised;
-						dispute_details.jury_acceptance_period = hearing.jury_acceptance_period.clone();
-						dispute_details.total_case_period = hearing.total_case_period.clone();
+						dispute_details.jury_acceptance_period = hearing.jury_acceptance_period;
+						dispute_details.total_case_period = hearing.total_case_period;
 						dispute_details.potential_jurors = Self::potential_jurors(task_details.clone());
 						// * Clearing the list of final jurors as people may have accepted jury duty
-						if dispute_details.final_jurors.len() != 0 {
+						if !dispute_details.final_jurors.is_empty() {
 							dispute_details.final_jurors.clear();
 						}
 						task_details.dispute = Some(dispute_details);
@@ -1254,7 +1265,7 @@ pub mod pallet {
 			for (acc_id, acc_details) in all_account_details {
 				if acc_details.avg_rating >= Some(4) && !acc_details.sudo {
 					for task_tag in &task_details.task_tags {
-						if acc_details.tags.contains(&task_tag)
+						if acc_details.tags.contains(task_tag)
 							&& acc_id.clone() != task_details.publisher
 							&& Some(acc_id.clone()) != task_details.worker_id
 						{
@@ -1307,7 +1318,7 @@ pub mod pallet {
 			// One era is one day
 			const ONE_ERA: u32 = 5;
 			// Retrieving complete task details
-			let task_id = task_details.task_id.clone();
+			let task_id = task_details.task_id;
 			// Time span for participant to become jurors
 			let jury_acceptance_period = <frame_system::Pallet<T>>::block_number() + ONE_ERA.into();
 			// Total case time

@@ -34,7 +34,7 @@ fn test_create_task (){
         let sender = ensure_signed(Origin::signed(1)).unwrap();
         let expected_task_details = TaskDetails {
             task_id: 0,
-            publisher: sender.clone(),
+            publisher: sender,
             worker_id: None,
             publisher_name: Some(b"Alice".to_vec()),
             worker_name: None,

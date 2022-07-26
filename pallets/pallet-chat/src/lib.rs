@@ -131,7 +131,7 @@ pub mod pallet {
 				message_id: message_count,
 				sender_id: sender.clone(),
 				receiver_id: receiver.clone(),
-				message: message,
+				message,
 				reply: None,
 				status: Status::Active
 			};
@@ -162,7 +162,7 @@ pub mod pallet {
 			// Ensure message id exists.
 			ensure! (<MsgStorage<T>>::contains_key(&message_id),<Error<T>>::MessageDoesNotExist);
 			// Get message.
-			let mut msg = Self::get_message(message_id.clone());
+			let mut msg = Self::get_message(message_id);
 			// Ensure the recipient only replies.
 			ensure! (receiver == msg.receiver_id,<Error<T>>::UnauthorisedToReply);
 			// Ensure check to make sure message is active.
@@ -203,7 +203,7 @@ pub mod pallet {
 				<Error<T>>::MessageDoesNotExist
 			);
 			// Get message.
-			let mut msg = Self::get_message(message_id.clone());
+			let mut msg = Self::get_message(message_id);
 			// Ensure if original sender is the one reading the message.
 			ensure! (sender == msg.sender_id,<Error<T>>::UnauthorisedToClose);
 			// Ensure if msg was replied.
