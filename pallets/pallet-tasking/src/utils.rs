@@ -16,7 +16,7 @@ pub fn dot_shuffle<T>(
     // -----
     
     // ----- Executing the Fischer-Yates algorithm
-    loop {
+    while !input.is_empty() {
         // * Function for adding individual numbers
         random_number_idx = get_sum(
             // * Linear congruential generator
@@ -36,10 +36,6 @@ pub fn dot_shuffle<T>(
         random_element = input.swap_remove(random_number_idx as usize);
         // Updating the vector
         result.push(random_element);
-        // Break the loop if there are no elements
-        if input.len() <= 0 {
-            break;
-        }
     }
     // -----
     
