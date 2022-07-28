@@ -110,6 +110,11 @@ impl ExtBuilder {
         self
     }
 
+    pub(crate) fn with_account_details(mut self, account_map: Vec<(AccountId,AccountDetails<Balance>)>) -> Self {
+        self.account_map = account_map;
+        self
+    }
+
     pub(crate) fn build(self) -> sp_io::TestExternalities {
         let mut t = system::GenesisConfig::default()
             .build_storage::<Test>()
