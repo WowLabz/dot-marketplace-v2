@@ -1145,23 +1145,6 @@ pub mod pallet {
 			}
 			res
 		}
-
-		//This is for testing only
-		pub fn get_milestone_helper() -> MilestoneHelper<BalanceOf<T>>{
-			let some_cost : BalanceOf<T> = 1000u32.saturated_into();
-		    let mut tags = Vec::new();
-			let mut publisher_attachments = Vec::new();
-			let deadline: u8 = 5;
-		    tags.push(TaskTypeTags::WebDevelopment);
-			publisher_attachments.push(b"http://aws/publisher.png".to_vec());
-			MilestoneHelper{
-				name: b"milestone".to_vec(),
-				cost: some_cost,
-				tags,
-				deadline,
-				publisher_attachments
-			}
-		}
 	}
 
 }
