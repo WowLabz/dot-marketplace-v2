@@ -1,12 +1,28 @@
 use crate::mock::ExtBuilder;
-use crate::{mock::*, Error, Status, TaskDetails, TaskTypeTags, UserType};
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
-use frame_system::{ensure_signed};
-use crate::AccountDetails;
+use crate::{mock::*, Error, TaskTypeTags, MilestoneHelper, BalanceOf};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, 
+    sp_runtime::traits::SaturatedConversion,
+};
+
+
+pub fn get_milestone_helper() -> MilestoneHelper<BalanceOf<Test>>{
+    let some_cost : BalanceOf<Test> = 1000u32.saturated_into();
+    let mut tags = Vec::new();
+    let mut publisher_attachments = Vec::new();
+    let deadline: u8 = 5;
+    tags.push(TaskTypeTags::WebDevelopment);
+    publisher_attachments.push(b"http://aws/publisher.png".to_vec());
+    MilestoneHelper{
+        name: b"milestone".to_vec(),
+        cost: some_cost,
+        tags,
+        deadline,
+        publisher_attachments
+    }
+}
 
 #[test]
-// Test functions for create_task extrinsic
-fn test_create_task (){
+fn it_works_for_creating_a_project_with_correct_details(){
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -18,106 +34,22 @@ fn test_create_task (){
         (7, 100000),
     ])
     .build()
-
-    //  Test for checking storage structure on creating a task
-    .execute_with(|| {
-        assert_ok!(Tasking::create_task(
-            Origin::signed(1),
-            30,
-            300,
-            b"Create a website".to_vec(),
-            b"Alice".to_vec(),
-            vec![TaskTypeTags::WebDevelopment],
-            Some(vec![b"http://aws/publisher.png".to_vec()])
-        ));
-        // Read pallet storage and assert an expected result.
-        let sender = ensure_signed(Origin::signed(1)).unwrap();
-        let expected_task_details = TaskDetails {
-            task_id: 0,
-            publisher: sender,
-            worker_id: None,
-            publisher_name: Some(b"Alice".to_vec()),
-            worker_name: None,
-            task_tags: vec![TaskTypeTags::WebDevelopment],
-            task_deadline: 30,
-            cost: 300,
-            status: Status::Open,
-            task_description: b"Create a website".to_vec(),
-            publisher_attachments: Some(vec![b"http://aws/publisher.png".to_vec()]),
-            worker_attachments: None,
-            dispute: None,
-            final_worker_rating: None,
-            final_customer_rating: None
-        };
-        assert_eq!(Tasking::task(0), expected_task_details);
-    });
-
-    // Test for chhecking error on an unsigned transaction
-    new_test_ext().execute_with(||{
-        assert_noop!(Tasking::create_task(
-            Origin::none(),
-            30,
-            300,
-            b"Create a website".to_vec(),
-            b"Alice".to_vec(),
-            vec![TaskTypeTags::WebDevelopment],
-            Some(vec![b"http://aws/publisher.png".to_vec()])
-        ),
-        DispatchError::BadOrigin
+    .execute_with(||{
+        assert_ok!(
+            Tasking::create_project(
+                Origin::signed(1),
+                b"Alice".to_vec(),
+                b"Project".to_vec(),
+                vec![TaskTypeTags::WebDevelopment],
+                get_milestone_helper(),
+                vec![]
+            )
         );
-    })
-}
-
-#[test]
-// Test for bid for task extrinsic
-fn test_bid_for_task(){
-    ExtBuilder::default()
-        .with_balances(vec![
-            (1, 100000),
-            (2, 100000),
-            (3, 100000),
-            (4, 100000),
-            (5, 100000),
-            (6, 100000),
-            (7, 100000),
-        ])
-        .build()
-        
-        .execute_with(||{
-        Tasking::create_task(
-            Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
-            b"Alice".to_vec(),
-            vec![TaskTypeTags::FullStackDevelopment], 
-            Some(vec![b"http://aws/publisher.png".to_vec()])
-        )
-        .unwrap();
-
-        // Test for bidding for a created task by a signed user
-        assert_ok!(
-            Tasking::bid_for_task(
-                Origin::signed(3),
-                0,
-                b"Bob".to_vec()
-            ));
-
-        // Test for error return whe bidding a task with incorrect task ID
-        assert_noop!(
-            Tasking::bid_for_task(
-                Origin::signed(3), 
-                10, 
-                b"Bob".to_vec()),
-                Error::<Test>::TaskDoesNotExist
-            );
     });
-
 }
 
 #[test]
-// Test for completing a task extrinsic
-fn test_task_completed() {
+fn correct_error_for_creating_a_project_with_incorrect_details(){
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -130,45 +62,113 @@ fn test_task_completed() {
     ])
     .build()
     .execute_with(|| {
-        Tasking::create_task(
-            Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
-            b"Alice".to_vec(),
-            vec![TaskTypeTags::FullStackDevelopment], 
-            Some(vec![b"http://aws/publisher.png".to_vec()])
-        )
-        .unwrap();
-        Tasking::bid_for_task(
-            Origin::signed(3), 
-            0, 
-            b"Bob".to_vec()
-        ).unwrap();
-
-        // Task being completed by the right worker
-        assert_ok!(
-            Tasking::task_completed(
-                Origin::signed(3), 
-                0, 
-                vec![b"http://aws/worker.png".to_vec()]
-            ));
-        
-        // Error test for trying to complete the task with a wrong ID
         assert_noop!(
-            Tasking::task_completed(
-                Origin::signed(4), 
-                0, 
-                vec![b"http://aws/worker.png".to_vec()]
+            Tasking::create_project(
+                Origin::none(),
+                b"Alice".to_vec(),
+                b"Project".to_vec(),
+                vec![TaskTypeTags::WebDevelopment],
+                get_milestone_helper(),
+                vec![]
             ),
-            Error::<Test>::TaskIsNotInProgress
+            DispatchError::BadOrigin
+        );
+    })
+}
+
+#[test]
+fn it_works_for_adding_a_miletone_to_a_project_with_correct_details(){
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    //let milestone = get_milestone_helper();
+    .execute_with(||{
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        assert_ok!(
+            Tasking::add_milestones_to_project(
+                Origin::signed(1), 
+                1, 
+                vec![get_milestone_helper()]
+            )
         );
     });
 }
 
 #[test]
-// Tests for approve tasks extrinsic
-fn test_approve_task() {
+fn correct_error_for_adding_milestones_to_the_project(){
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    //let milestone = get_milestone_helper();
+    .execute_with(||{
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        assert_noop!(
+            Tasking::add_milestones_to_project(
+                Origin::none(), 
+                1, 
+                vec![get_milestone_helper()]
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Tasking::add_milestones_to_project(
+                Origin::signed(1), 
+                2, 
+                vec![get_milestone_helper()]
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::add_milestones_to_project(
+                Origin::signed(2), 
+                1, 
+                vec![get_milestone_helper()]
+            ),
+            Error::<Test>::Unauthorised
+        );
+        assert_noop!(
+            Tasking::add_milestones_to_project(
+                Origin::signed(1), 
+                1, 
+                vec![get_milestone_helper(),get_milestone_helper(),get_milestone_helper(),get_milestone_helper(),get_milestone_helper(),get_milestone_helper()]
+            ),
+            Error::<Test>::MilestoneLimitReached
+        );
+    });
+}
+
+#[test]
+fn it_works_for_adding_the_project_to_marketplace_with_correct_details() {
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -181,149 +181,652 @@ fn test_approve_task() {
     ])
     .build()
     .execute_with(|| {
-        Tasking::create_task(
+        Tasking::create_project(
             Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
             b"Alice".to_vec(),
-            vec![TaskTypeTags::FullStackDevelopment],
-            Some(vec![b"http://aws/publisher.png".to_vec()]),
-        )
-        .unwrap();
-        Tasking::bid_for_task(Origin::signed(3), 0, b"Bob".to_vec()).unwrap();
-        Tasking::task_completed(
-            Origin::signed(3),
-            0,
-            vec![b"http://aws/worker.png".to_vec()],
-        )
-        .unwrap();
-        
-        // Success test for approving task
-        assert_ok!(Tasking::approve_task(Origin::signed(1), 0, 5));
-
-        // Error test for approving task with an account id other than the publishers
-        assert_noop!(Tasking::approve_task(Origin::signed(2), 0, 5), Error::<Test>::TaskIsNotPendingApproval);
-    })
-}
-
-#[test]
-fn test_provide_customer_ratings(){
-    ExtBuilder::default()
-        .with_balances(vec![
-            (1, 100000),
-            (2, 100000),
-            (3, 100000),
-            (4, 100000),
-            (5, 100000),
-            (6, 100000),
-            (7, 100000),
-        ]) 
-        .build()
-        .execute_with(|| {
-            Tasking::create_task(
-                Origin::signed(1),
-                50,
-                500,
-                b"Backend Systems".to_vec(),
-                b"Alice".to_vec(),
-                vec![TaskTypeTags::FullStackDevelopment],
-                Some(vec![b"http://aws/publisher.png".to_vec()]),
-            )
-            .unwrap();
-            Tasking::bid_for_task(
-                Origin::signed(3), 
-                0, 
-                b"Bob".to_vec()
-            ).unwrap();
-            Tasking::task_completed(
-                Origin::signed(3),
-                0,
-                vec![b"http://aws/worker.png".to_vec()],
-            )
-            .unwrap();
-            Tasking::approve_task(
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        assert_ok!(
+            Tasking::add_project_to_marketplace(
                 Origin::signed(1), 
-                0, 
-                5
-            ).unwrap();
-
-            // Success test for providing customer rating
-            assert_ok!(
-                Tasking::provide_customer_rating(
-                Origin::signed(3),
-                0,
-                5
-            ));
-
-            // Error test for providing rating to incorrect task ID
-            assert_noop!(
-                Tasking::provide_customer_rating(
-                Origin::signed(3),
-                2,
-                5
-            ), 
-            Error::<Test>::TaskDoesNotExist
+                1
+            )
         );
-        });
+    });
 }
 
 #[test]
-fn test_close_task(){
+fn correct_error_for_adding_project_to_marketplace() {
     ExtBuilder::default()
-        .with_balances(vec![
-            (1, 100000),
-            (2, 100000),
-            (3, 100000),
-            (4, 100000),
-            (5, 100000),
-            (6, 100000),
-            (7, 100000),
-        ])
-        .build()
-        .execute_with(|| {
-            Tasking::create_task(
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        assert_noop!(
+            Tasking::add_project_to_marketplace(
+                Origin::none(), 
+                1
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Tasking::add_project_to_marketplace(
+                Origin::signed(2),
+                1
+            ),
+            Error::<Test>::Unauthorised
+        );
+        assert_noop!(
+            Tasking::add_project_to_marketplace(
                 Origin::signed(1),
-                50,
-                500,
-                b"Backend Systems".to_vec(),
-                b"Alice".to_vec(),
-                vec![TaskTypeTags::FullStackDevelopment],
-                Some(vec![b"http://aws/publisher.png".to_vec()]),
-            )
-            .unwrap();
-            Tasking::bid_for_task(
-                Origin::signed(3), 
-                0, 
+                2
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+    });
+}
+
+
+#[test]
+fn it_works_for_bidding_for_a_milestone_with_correct_details() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        assert_ok!(
+            Tasking::bid_for_milestone(
+                Origin::signed(2), 
+                b"1a".to_vec(), 
                 b"Bob".to_vec()
-            ).unwrap();
-            Tasking::task_completed(
-                Origin::signed(3),
-                0,
-                vec![b"http://aws/worker.png".to_vec()],
             )
-            .unwrap();
-            Tasking::approve_task(
+        );
+    });
+}
+
+#[test]
+fn correct_error_for_bidding_for_a_milestone() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        assert_noop!(
+            Tasking::bid_for_milestone(
+                Origin::none(),
+                b"1a".to_vec(),
+                b"Bob".to_vec()
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Tasking::bid_for_milestone(
+                Origin::signed(1),
+                b"1a".to_vec(),
+                b"Bob".to_vec()
+            ),
+            Error::<Test>::PublisherCannotBid
+        );
+        assert_noop!(
+            Tasking::bid_for_milestone(
+                Origin::signed(2),
+                b"2a".to_vec(),
+                b"Bob".to_vec()
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::bid_for_milestone(
+                Origin::signed(2),
+                b"1b".to_vec(),
+                b"Bob".to_vec()
+            ),
+            Error::<Test>::InvalidMilestoneId
+        );
+    });
+}
+
+#[test]
+fn it_works_for_accepting_a_bid_for_a_milestone_with_correct_details() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            b"Bob".to_vec()
+        ).unwrap();
+        assert_ok!(
+            Tasking::accept_bid(
                 Origin::signed(1), 
-                0, 
-                5
-            ).unwrap();
+                b"1a".to_vec(), 
+                1
+            )
+        );
+    });
+}
+
+#[test]
+fn correct_error_while_accepting_a_bid() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            b"Bob".to_vec()
+        ).unwrap();
+        assert_noop!(
+            Tasking::accept_bid(
+                Origin::none(),
+                b"1a".to_vec(),
+                1
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Tasking::accept_bid(
+                Origin::signed(2),
+                b"1a".to_vec(),
+                1
+            ),
+            Error::<Test>::Unauthorised
+        );
+        assert_noop!(
+            Tasking::accept_bid(
+                Origin::signed(1),
+                b"2a".to_vec(),
+                1
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::accept_bid(
+                Origin::signed(1),
+                b"1c".to_vec(),
+                1
+            ),
+            Error::<Test>::InvalidMilestoneId
+        );
+        assert_noop!(
+            Tasking::accept_bid(
+                Origin::signed(1),
+                b"1a".to_vec(),
+                2
+            ),
+            Error::<Test>::InvalidBidNumber
+        );
+    });
+}
+
+#[test]
+fn it_works_for_completing_a_milestone_with_correct_details() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            b"Bob".to_vec()
+        ).unwrap();
+        Tasking::accept_bid(
+            Origin::signed(1), 
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        assert_ok!(
+            Tasking::milestone_completed(
+                Origin::signed(2),
+                b"1a".to_vec(),
+                vec![b"some attachment".to_vec()]
+            )
+        );
+    });
+}
+
+#[test]
+fn correct_error_for_completing_the_milestone() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            b"Bob".to_vec()
+        ).unwrap();
+        Tasking::accept_bid(
+            Origin::signed(1), 
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        assert_noop!(
+            Tasking::milestone_completed(
+                Origin::none(),
+                b"1a".to_vec(),
+                vec![b"some attachment".to_vec()]
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Tasking::milestone_completed(
+                Origin::signed(2),
+                b"2a".to_vec(),
+                vec![b"some attachment".to_vec()]
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::milestone_completed(
+                Origin::signed(2),
+                b"2a".to_vec(),
+                vec![b"some attachment".to_vec()]
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::milestone_completed(
+                Origin::signed(1),
+                b"1a".to_vec(),
+                vec![b"some attachment".to_vec()]
+            ),
+            Error::<Test>::PublisherCannotCompleteMilestone
+        );
+        assert_noop!(
+            Tasking::milestone_completed(
+                Origin::signed(2),
+                b"1c".to_vec(),
+                vec![b"some attachment".to_vec()]
+            ),
+            Error::<Test>::InvalidMilestoneId
+        );
+        assert_noop!(
+            Tasking::milestone_completed(
+                Origin::signed(3),
+                b"1a".to_vec(),
+                vec![b"some attachment".to_vec()]
+            ),
+            Error::<Test>::UnauthorisedToComplete
+        );
+    });
+}
+
+
+#[test]
+fn it_works_for_approving_a_milestone_with_correct_details() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            b"Bob".to_vec()
+        ).unwrap();
+        Tasking::accept_bid(
+            Origin::signed(1), 
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
+        ).unwrap();
+        assert_ok!(
+            Tasking::approve_milestone(
+                Origin::signed(1),
+                b"1a".to_vec(),
+                4
+            )
+        );
+    });
+}
+
+#[test]
+fn correct_error_for_approving_a_milestone(){
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            b"Bob".to_vec()
+        ).unwrap();
+        Tasking::accept_bid(
+            Origin::signed(1), 
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
+        ).unwrap();
+        assert_noop!(
+            Tasking::approve_milestone(
+                Origin::none(),
+                b"1a".to_vec(),
+                4
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Tasking::approve_milestone(
+                Origin::signed(1),
+                b"2a".to_vec(),
+                4
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::approve_milestone(
+                Origin::signed(2),
+                b"1a".to_vec(),
+                4
+            ),
+            Error::<Test>::UnauthorisedToApprove
+        );
+        assert_noop!(
+            Tasking::approve_milestone(
+                Origin::signed(1),
+                b"1d".to_vec(),
+                4
+            ),
+            Error::<Test>::InvalidMilestoneId
+        );
+    });
+}
+
+
+#[test]
+fn it_works_for_providing_customer_rating_with_correct_details() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            b"Bob".to_vec()
+        ).unwrap();
+        Tasking::accept_bid(
+            Origin::signed(1), 
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
+        ).unwrap();
+        Tasking::approve_milestone(
+            Origin::signed(1),
+            b"1a".to_vec(),
+            4
+        ).unwrap();
+        assert_ok!(
             Tasking::provide_customer_rating(
-                Origin::signed(3),
-                0,
-                5
-            ).unwrap();
-            assert_ok!(
-                Tasking::close_task(
-                    Origin::signed(1),
-                    0
-                )
-            );
-        })
+                Origin::signed(2), 
+                b"1a".to_vec(), 
+                4
+            )
+        );
+    });   
 }
 
 #[test]
-fn test_disapprove_task(){
+fn correct_error_for_providing_customer_rating() {
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -336,89 +839,97 @@ fn test_disapprove_task(){
     ])
     .build()
     .execute_with(|| {
-        Tasking::create_task(
+        Tasking::create_project(
             Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
             b"Alice".to_vec(),
-            vec![TaskTypeTags::FullStackDevelopment],
-            Some(vec![b"http://aws/publisher.png".to_vec()]),
-        )
-        .unwrap();
-        Tasking::bid_for_task(
-            Origin::signed(3), 
-            0, 
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
             b"Bob".to_vec()
         ).unwrap();
-        Tasking::task_completed(
-            Origin::signed(3),
-            0,
-            vec![b"http://aws/worker.png".to_vec()],
-        )
-        .unwrap();
-        assert_ok!(
-            Tasking::disapprove_task(
+        Tasking::accept_bid(
+            Origin::signed(1), 
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
+        ).unwrap();
+        Tasking::approve_milestone(
+            Origin::signed(1),
+            b"1a".to_vec(),
+            4
+        ).unwrap();
+        assert_noop!(
+            Tasking::provide_customer_rating(
+                Origin::none(), 
+                b"1a".to_vec(), 
+                4
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Tasking::provide_customer_rating(
                 Origin::signed(1), 
-                0)
-            );
-    })
-
-}
-
-#[test]
-fn test_worker_disapprove_rating(){
-    ExtBuilder::default()
-    .with_balances(vec![
-        (1, 100000),
-        (2, 100000),
-        (3, 100000),
-        (4, 100000),
-        (5, 100000),
-        (6, 100000),
-        (7, 100000),
-    ])
-    .build()
-    .execute_with(|| {
-        Tasking::create_task(
-            Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
-            b"Alice".to_vec(),
-            vec![TaskTypeTags::FullStackDevelopment],
-            Some(vec![b"http://aws/publisher.png".to_vec()]),
-        )
-        .unwrap();
-        Tasking::bid_for_task(
-            Origin::signed(3), 
-            0, 
-            b"Bob".to_vec()
-        ).unwrap();
-        Tasking::task_completed(
-            Origin::signed(3),
-            0,
-            vec![b"http://aws/worker.png".to_vec()],
-        )
-        .unwrap();
-        Tasking::approve_task(
-            Origin::signed(1), 
-            0, 
-            5
-        ).unwrap();
-        assert_ok!(
-            Tasking::disapprove_rating(
-                Origin::signed(3),
-                0,
-                UserType::Worker
-            )
+                b"1a".to_vec(), 
+                4
+            ),
+            Error::<Test>::PublisherCannotRateSelf
         );
-    })
-    
+        assert_noop!(
+            Tasking::provide_customer_rating(
+                Origin::signed(1), 
+                b"2a".to_vec(), 
+                4
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::provide_customer_rating(
+                Origin::signed(2), 
+                b"1c".to_vec(), 
+                4
+            ),
+            Error::<Test>::InvalidMilestoneId
+        );
+        assert_noop!(
+            Tasking::provide_customer_rating(
+                Origin::signed(2), 
+                b"1b".to_vec(), 
+                4
+            ),
+            Error::<Test>::MilestoneNotPendingRating
+        );
+        assert_noop!(
+            Tasking::provide_customer_rating(
+                Origin::signed(3), 
+                b"1a".to_vec(), 
+                4
+            ),
+            Error::<Test>::UnauthorisedToProvideCustomerRating
+        );
+    });
 }
 
+
 #[test]
-fn test_customer_disapprove_rating(){
+fn it_works_for_closing_the_milestone_with_correct_details() {
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -431,50 +942,59 @@ fn test_customer_disapprove_rating(){
     ])
     .build()
     .execute_with(|| {
-        Tasking::create_task(
+        Tasking::create_project(
             Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
             b"Alice".to_vec(),
-            vec![TaskTypeTags::FullStackDevelopment],
-            Some(vec![b"http://aws/publisher.png".to_vec()]),
-        )
-        .unwrap();
-        Tasking::bid_for_task(
-            Origin::signed(3), 
-            0, 
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
             b"Bob".to_vec()
         ).unwrap();
-        Tasking::task_completed(
-            Origin::signed(3),
-            0,
-            vec![b"http://aws/worker.png".to_vec()],
-        )
-        .unwrap();
-        Tasking::approve_task(
+        Tasking::accept_bid(
             Origin::signed(1), 
-            0, 
-            5
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
+        ).unwrap();
+        Tasking::approve_milestone(
+            Origin::signed(1),
+            b"1a".to_vec(),
+            4
         ).unwrap();
         Tasking::provide_customer_rating(
-            Origin::signed(3),
-            0,
-            5
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            4
         ).unwrap();
         assert_ok!(
-            Tasking::disapprove_rating(
+            Tasking::close_milestone(
                 Origin::signed(1),
-                0,
-                UserType::Customer
+                b"1a".to_vec()
             )
         );
-    })
-    
+    });
 }
 
 #[test]
-fn raise_dispute(){
+fn correct_error_while_closing_the_milestones() {
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -487,50 +1007,81 @@ fn raise_dispute(){
     ])
     .build()
     .execute_with(|| {
-        Tasking::create_task(
+        Tasking::create_project(
             Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
             b"Alice".to_vec(),
-            vec![TaskTypeTags::FullStackDevelopment],
-            Some(vec![b"http://aws/publisher.png".to_vec()]),
-        )
-        .unwrap();
-        Tasking::bid_for_task(
-            Origin::signed(3), 
-            0, 
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
             b"Bob".to_vec()
         ).unwrap();
-        Tasking::task_completed(
-            Origin::signed(3),
-            0,
-            vec![b"http://aws/worker.png".to_vec()],
-        )
-        .unwrap();
-        Tasking::approve_task(
+        Tasking::accept_bid(
             Origin::signed(1), 
-            0, 
-            5
+            b"1a".to_vec(), 
+            1
+        ).unwrap();
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
+        ).unwrap();
+        Tasking::approve_milestone(
+            Origin::signed(1),
+            b"1a".to_vec(),
+            4
         ).unwrap();
         Tasking::provide_customer_rating(
-            Origin::signed(3),
-            0,
-            5
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            4
         ).unwrap();
-        assert_ok!(
-            Tasking::raise_dispute(
-                Origin::signed(3),
-                0,
-                UserType::Worker
-            )
+        assert_noop!(
+            Tasking::close_milestone(
+                Origin::none(),
+                b"1a".to_vec()
+            ),
+            DispatchError::BadOrigin
         );
-    })
-
+        assert_noop!(
+            Tasking::close_milestone(
+                Origin::signed(1),
+                b"2a".to_vec()
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+        assert_noop!(
+            Tasking::close_milestone(
+                Origin::signed(1),
+                b"1c".to_vec()
+            ),
+            Error::<Test>::InvalidMilestoneId
+        );
+        assert_noop!(
+            Tasking::close_milestone(
+                Origin::signed(1),
+                b"1b".to_vec()
+            ),
+            Error::<Test>::CustomerRatingNotProvided
+        );
+    });
 }
 
 #[test]
-fn test_accept_jury_duty(){
+fn it_works_for_closing_the_project_with_correct_details() {
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -540,102 +1091,66 @@ fn test_accept_jury_duty(){
         (5, 100000),
         (6, 100000),
         (7, 100000),
-    ])
-    .with_account_details(vec![
-        (1, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: true
-		}),
-        (2, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (3, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (4, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (5, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (6, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (7, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
     ])
     .build()
     .execute_with(|| {
-        Tasking::create_task(
+        Tasking::create_project(
             Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
             b"Alice".to_vec(),
-            vec![TaskTypeTags::MachineLearning],
-            Some(vec![b"http://aws/publisher.png".to_vec()]),
-        )
-        .unwrap();
-        Tasking::bid_for_task(
-            Origin::signed(3), 
-            0, 
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
             b"Bob".to_vec()
         ).unwrap();
-        Tasking::task_completed(
-            Origin::signed(3),
-            0,
-            vec![b"http://aws/worker.png".to_vec()],
-        ).unwrap();
-        Tasking::disapprove_task(
+        Tasking::accept_bid(
             Origin::signed(1), 
-            0
+            b"1a".to_vec(), 
+            1
         ).unwrap();
-        System::set_block_number(6);
-        Tasking::collect_cases(6);
-        System::set_block_number(11);
-        Tasking::collect_cases(11);
-        // System::set_block_number(16);
-        // Tasking::collect_cases(16);
-        
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
+        ).unwrap();
+        Tasking::approve_milestone(
+            Origin::signed(1),
+            b"1a".to_vec(),
+            4
+        ).unwrap();
+        Tasking::provide_customer_rating(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            4
+        ).unwrap();
+        Tasking::close_milestone(
+            Origin::signed(1),
+            b"1a".to_vec()
+        ).unwrap();
         assert_ok!(
-            Tasking::accept_jury_duty(
-            Origin::signed(7),
-            0)
+            Tasking::close_project(
+                Origin::signed(1),
+                1
+            )
         );
-    })
-
+    });
 }
 
 #[test]
-fn test_cast_vote(){
+fn correct_error_for_closing_the_project() {
     ExtBuilder::default()
     .with_balances(vec![
         (1, 100000),
@@ -646,113 +1161,75 @@ fn test_cast_vote(){
         (6, 100000),
         (7, 100000),
     ])
-    .with_account_details(vec![
-        (1, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: true
-		}),
-        (2, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (3, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (4, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (5, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (6, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-        (7, AccountDetails {
-			balance: 1 << 60,
-			ratings: [5, 5, 5, 5, 5].to_vec(),
-			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
-		}),
-    ])
     .build()
-    .execute_with( ||{
-        Tasking::create_task(
+    .execute_with(|| {
+        Tasking::create_project(
             Origin::signed(1),
-            50,
-            500,
-            b"Backend Systems".to_vec(),
             b"Alice".to_vec(),
-            vec![TaskTypeTags::MachineLearning],
-            Some(vec![b"http://aws/publisher.png".to_vec()]),
-        )
-        .unwrap();
-        //System::set_block_number(2);
-        Tasking::bid_for_task(
-            Origin::signed(3), 
-            0, 
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        Tasking::bid_for_milestone(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
             b"Bob".to_vec()
         ).unwrap();
-        //System::set_block_number(3);
-        Tasking::task_completed(
-            Origin::signed(3),
-            0,
-            vec![b"http://aws/worker.png".to_vec()],
-        ).unwrap();
-        System::set_block_number(3);
-        Tasking::disapprove_task(
+        Tasking::accept_bid(
             Origin::signed(1), 
-            0
+            b"1a".to_vec(), 
+            1
         ).unwrap();
-        
-        Tasking::accept_jury_duty(
-            Origin::signed(7),
-            0
+        Tasking::milestone_completed(
+            Origin::signed(2),
+            b"1a".to_vec(),
+            vec![b"some attachment".to_vec()]
         ).unwrap();
-        // Number shoud be equal block number at disapprove task + 5
-        System::set_block_number(8);
-        Tasking::collect_cases(8);
-        
-        System::set_block_number(10);
-        let task = Tasking::task(0);
-        println!("***Task Details: {:?}",task.status);
-        assert_ok!(
-            Tasking::cast_vote(
-                Origin::signed(7),
-                0,
-                UserType::Worker,
-                4,
-                5
-            )
+        Tasking::approve_milestone(
+            Origin::signed(1),
+            b"1a".to_vec(),
+            4
+        ).unwrap();
+        Tasking::provide_customer_rating(
+            Origin::signed(2), 
+            b"1a".to_vec(), 
+            4
+        ).unwrap();
+        Tasking::close_milestone(
+            Origin::signed(1),
+            b"1a".to_vec()
+        ).unwrap();
+        assert_noop!(
+            Tasking::close_project(
+                Origin::none(),
+                1
+            ),
+            DispatchError::BadOrigin
         );
-
-                
-    })
+        assert_noop!(
+            Tasking::close_project(
+                Origin::signed(2),
+                1
+            ),
+            Error::<Test>::Unauthorised
+        );
+        assert_noop!(
+            Tasking::close_project(
+                Origin::signed(1),
+                2
+            ),
+            Error::<Test>::ProjectDoesNotExist
+        );
+    });
 }
-
-
-
-        
 

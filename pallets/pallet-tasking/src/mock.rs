@@ -81,12 +81,14 @@ impl system::Config for Test {
 
 parameter_types! {
 	pub const MyPalletId: PalletId = PalletId(*b"acescrow");
+    pub const MaxMilestoneLimit: u8 = 5;
 }
 
 impl pallet_tasking::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type PalletId = MyPalletId;
+    type MaxMilestoneLimit = MaxMilestoneLimit;
 }
 
 // Implementing the ExtBuilder to initialize balances 
@@ -105,11 +107,6 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub(crate) fn with_balances(mut self, balances: Vec<(AccountId, Balance)>) -> Self {
         self.balances = balances;
-        self
-    }
-
-    pub(crate) fn with_account_details(mut self, account_map: Vec<(AccountId,AccountDetails<Balance>)>) -> Self {
-        self.account_map = account_map;
         self
     }
 
@@ -136,10 +133,4 @@ impl ExtBuilder {
     }
 }
 
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap()
-        .into()
-}
+
