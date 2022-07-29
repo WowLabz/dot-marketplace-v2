@@ -101,12 +101,12 @@ pub mod pallet {
 	// a struct for advance search
 	#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	pub struct SearchDetails <Balance>{
-		tags: Vec<TaskTypeTags>,
-		status: Status,
-		minimum_cost: Option<Balance>,
-		maximum_cost: Option<Balance>,
-		minimum_deadline: Option<u8>,
-		maximum_deadline: Option<u8>
+		pub tags: Vec<TaskTypeTags>,
+		pub status: Status,
+		pub minimum_cost: Option<Balance>,
+		pub maximum_cost: Option<Balance>,
+		pub minimum_deadline: Option<u8>,
+		pub maximum_deadline: Option<u8>
 	}
 
 	// a struct for the input of milestones

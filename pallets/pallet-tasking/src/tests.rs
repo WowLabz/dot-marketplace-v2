@@ -1,5 +1,5 @@
 use crate::mock::ExtBuilder;
-use crate::{mock::*, Error, TaskTypeTags, MilestoneHelper, BalanceOf, UserType, AccountDetails};
+use crate::{mock::*, Error, TaskTypeTags, MilestoneHelper, BalanceOf, UserType, AccountDetails, SearchDetails, Status};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, 
     sp_runtime::traits::SaturatedConversion,
 };
@@ -18,6 +18,20 @@ pub fn get_milestone_helper() -> MilestoneHelper<BalanceOf<Test>>{
         tags,
         deadline,
         publisher_attachments
+    }
+}
+
+fn get_search_query() -> SearchDetails<BalanceOf<Test>> {
+    let mut tags = Vec::new();
+    tags.push(TaskTypeTags::WebDevelopment);
+    let status = Status::Open;
+    SearchDetails{
+        tags,
+        status,
+        minimum_cost:None,
+        maximum_cost:None,
+        minimum_deadline:None,
+        maximum_deadline:None,
     }
 }
 
@@ -1816,3 +1830,83 @@ fn correct_error_for_closing_the_project() {
     });
 }
 
+#[test]
+fn it_works_for_searching_for_milestone() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        assert_ok!(
+            Tasking::search_milestones(
+                Origin::signed(1),
+                get_search_query()
+            )
+        );
+    });
+}
+
+#[test]
+fn correct_error_while_searching_with_incorrect_details() {
+    ExtBuilder::default()
+    .with_balances(vec![
+        (1, 100000),
+        (2, 100000),
+        (3, 100000),
+        (4, 100000),
+        (5, 100000),
+        (6, 100000),
+        (7, 100000),
+    ])
+    .build()
+    .execute_with(|| {
+        Tasking::create_project(
+            Origin::signed(1),
+            b"Alice".to_vec(),
+            b"Project".to_vec(),
+            vec![TaskTypeTags::WebDevelopment],
+            get_milestone_helper(),
+            vec![]
+        ).unwrap();
+        Tasking::add_milestones_to_project(
+            Origin::signed(1), 
+        1, 
+        vec![get_milestone_helper()]
+        ).unwrap();
+        Tasking::add_project_to_marketplace(
+            Origin::signed(1), 
+            1
+        ).unwrap();
+        assert_noop!(
+            Tasking::search_milestones(
+                Origin::none(), 
+                get_search_query()
+            ),
+            DispatchError::BadOrigin
+        );
+    });
+}
