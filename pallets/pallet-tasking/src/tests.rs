@@ -8,10 +8,10 @@ use frame_support::{assert_noop, assert_ok, dispatch::DispatchError,
 pub fn get_milestone_helper() -> MilestoneHelper<BalanceOf<Test>>{
     let some_cost : BalanceOf<Test> = 1000u32.saturated_into();
     let mut tags = Vec::new();
-    let publisher_attachments;
+    
     let deadline: u8 = 5;
     tags.push(TaskTypeTags::WebDevelopment);
-    publisher_attachments = b"http://aws/publisher.png".to_vec();
+    let publisher_attachments = b"http://aws/publisher.png".to_vec();
     MilestoneHelper{
         name: b"milestone".to_vec(),
         cost: some_cost,
