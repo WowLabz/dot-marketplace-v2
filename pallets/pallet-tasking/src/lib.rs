@@ -29,7 +29,6 @@ pub mod pallet {
 	use codec::{Decode, Encode};
 	use sp_std::collections::btree_map::BTreeMap;
 	use sp_std::vec::Vec;
-	use sp_std::cmp::Ordering;
 	use crate::utils::{dot_shuffle,roundoff, create_milestone_id, get_milestone_and_project_id};
 
 	type Item<T> = <T as frame_system::Config>::AccountId;
@@ -98,6 +97,17 @@ pub mod pallet {
 		AgainstWorker,
 	}
 
+	// a struct for advance search
+	#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
+	pub struct SearchDetails <Balance>{
+		tags: Vec<TaskTypeTags>,
+		status: Status,
+		minimum_cost: Option<Balance>,
+		maximum_cost: Option<Balance>,
+		minimum_deadline: Option<u8>,
+		maximum_deadline: Option<u8>
+	}
+
 	// a struct for the input of milestones
 	#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	pub struct MilestoneHelper<Balance> {
@@ -114,7 +124,7 @@ pub mod pallet {
 		pub project_id: u128,
 		pub publisher: AccountId,
 		pub project_name: Vec<u8>,
-		pub tags: Vec<TaskTypeTags>, // other approach possible
+		pub tags: Vec<TaskTypeTags>, 
 		pub publisher_name: Option<Vec<u8>>,
 		pub milestones: Option<Vec<Milestone<AccountId, Balance, BlockNumber>>>,
 		pub overall_customer_rating: Option<u8>,
@@ -125,10 +135,10 @@ pub mod pallet {
 	impl<AccountId, Balance, BlockNumber> ProjectDetails<AccountId, Balance, BlockNumber> {
 		pub fn new(project_id:u128, project_name: Vec<u8>, tags: Vec<TaskTypeTags>, publisher: AccountId, publisher_name: Vec<u8>) -> Self {
 			ProjectDetails{
-				project_id,
-				project_name,
-				tags,
-				publisher,
+				project_id: project_id,
+				project_name: project_name,
+				tags: tags,
+				publisher: publisher,
 				publisher_name: Some(publisher_name),
 				milestones: None,
 				overall_customer_rating: None,
@@ -167,12 +177,12 @@ pub mod pallet {
 			publisher_attachments: Vec<u8>,
 		) -> Self {
 			Milestone{
-				milestone_id,
-				milestone_name,
-				tags,
-				cost,
+				milestone_id: milestone_id,
+				milestone_name: milestone_name,
+				tags: tags,
+				cost: cost,
 				status: Default::default(),
-				deadline,
+				deadline: deadline,
 				worker_id: None,
 				worker_name: None,
 				publisher_attachments: Some(publisher_attachments),
@@ -282,8 +292,8 @@ pub mod pallet {
 			for item in list.iter() {
 				total_sum += item;
 			}
-			
-			roundoff(total_sum, list_len)
+			let average = roundoff(total_sum, list_len);
+			average
 		} 
 	}
 
@@ -357,6 +367,9 @@ pub mod pallet {
 		}
 	}
 
+
+	// *********************** Substrate Storage **********************
+
 	#[pallet::storage]
 	#[pallet::getter(fn get_project_count)]
 	pub type ProjectCount<T> = StorageValue<_, u128, ValueQuery>;
@@ -384,6 +397,11 @@ pub mod pallet {
 	pub(super) type Hearings<T: Config> =
 		StorageValue<_, Vec<Hearing<BlockNumberOf<T>>>, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_search_item)]
+	pub(super) type Searches<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>>>, OptionQuery>;
+
+    // ******************* Substrate Events ******************************
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -426,8 +444,14 @@ pub mod pallet {
 		CourtSummoned(Vec<u8>, UserType, Reason),
 		/// New juror has been added. \[MilestoneId, AccountId]
 		NewJurorAdded(Vec<u8>, T::AccountId),
+		/// Results were found in search. \[User, NumberOfResults]
+		SearchSuccessful(T::AccountId, u128),
+		/// No results were found in a search.
+		NoResultFound,
 	}
 
+	// ************************* Substrate Errors **************************
+	
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Error names should be descriptive.
@@ -580,8 +604,8 @@ pub mod pallet {
 																			worker_rating: Some(worker_rating),
 																		};
 																		dispute.final_jurors.insert(sender.clone(), sudo_juror_details);
-																		let mut votes_for_customer = dispute.votes_for_customer.unwrap_or(0);
-																		let mut votes_for_worker = dispute.votes_for_worker.unwrap_or(0);
+																		let mut votes_for_customer = dispute.votes_for_customer.clone().unwrap_or(0);
+																		let mut votes_for_worker = dispute.votes_for_worker.clone().unwrap_or(0);
 																		match voted_for {
 																			UserType::Customer => {
 																				votes_for_customer += 1;
@@ -822,38 +846,40 @@ pub mod pallet {
 													let current_period = <frame_system::Pallet<T>>::block_number();
 													if current_period >= dispute.total_case_period {
 														res = Err(<Error<T>>::JurySelectionPeriodElapsed);
-													}else if dispute.potential_jurors.contains(&sender) {
-             															if dispute.final_jurors.len() >= 2 {
-             																res = Err(<Error<T>>::CannotAddMoreJurors);
-             															}else if dispute.final_jurors.contains_key(&sender){
-             																res = Err(<Error<T>>::JurorHasVoted);
-             															}else{
-             																let juror_details = JurorDecisionDetails {
-             																	voted_for: Some(voted_for.clone()),
-             																	publisher_rating: Some(customer_rating),
-             																	worker_rating: Some(worker_rating),
-             																};
-             																// inserting juror into final juror
-             																dispute.final_jurors.insert(sender.clone(), juror_details);
-             																// updating the vote count
-             																let mut votes_for_customer = dispute.votes_for_customer.unwrap_or(0);
-             																let mut votes_for_worker = dispute.votes_for_worker.unwrap_or(0);
-             																match voted_for {
-             																	UserType::Customer => {
-             																		votes_for_customer += 1;
-             																		dispute.votes_for_customer = Some(votes_for_customer);
-             																	},
-             																	UserType::Worker => {
-             																		votes_for_worker += 1;
-             																		dispute.votes_for_worker = Some(votes_for_worker);
-             																	}
-             																}
-             																Self::deposit_event(Event::NewJurorAdded(milestone_id, sender));
-             																res = Ok(());
-             															}
-             														}else{
-             															res = Err(<Error<T>>::NotPotentialJuror);
-             														}
+													}else{
+														if dispute.potential_jurors.contains(&sender) {
+															if dispute.final_jurors.len() >= 2 {
+																res = Err(<Error<T>>::CannotAddMoreJurors);
+															}else if dispute.final_jurors.contains_key(&sender){
+																res = Err(<Error<T>>::JurorHasVoted);
+															}else{
+																let juror_details = JurorDecisionDetails {
+																	voted_for: Some(voted_for.clone()),
+																	publisher_rating: Some(customer_rating),
+																	worker_rating: Some(worker_rating),
+																};
+																// inserting juror into final juror
+																dispute.final_jurors.insert(sender.clone(), juror_details);
+																// updating the vote count
+																let mut votes_for_customer = dispute.votes_for_customer.unwrap_or(0);
+																let mut votes_for_worker = dispute.votes_for_worker.unwrap_or(0);
+																match voted_for {
+																	UserType::Customer => {
+																		votes_for_customer += 1;
+																		dispute.votes_for_customer = Some(votes_for_customer);
+																	},
+																	UserType::Worker => {
+																		votes_for_worker += 1;
+																		dispute.votes_for_worker = Some(votes_for_worker);
+																	}
+																}
+																Self::deposit_event(Event::NewJurorAdded(milestone_id, sender));
+																res = Ok(());
+															}
+														}else{
+															res = Err(<Error<T>>::NotPotentialJuror);
+														}
+													}
 												},
 												None => res = Err(<Error<T>>::DisputeDoesNotExist)
 											}
@@ -887,8 +913,8 @@ pub mod pallet {
 			let publisher = ensure_signed(origin)?;
 			ensure!(add_milestones.len() < 5, <Error<T>>::MilestoneLimitReached);
 			let project_id = Self::get_project_count() + 1;
-			<ProjectCount<T>>::set(project_id);
-			let mut project = ProjectDetails::new(project_id, project_name.clone(), tags, publisher.clone(), publisher_name);
+			<ProjectCount<T>>::set(project_id.clone());
+			let mut project = ProjectDetails::new(project_id.clone(), project_name.clone(), tags, publisher.clone(), publisher_name);
 			let mid = create_milestone_id(project_id, 0);
 			let milestone1: Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>> = Milestone::new(mid, milestone_one.name, milestone_one.tags, milestone_one.cost, milestone_one.deadline, milestone_one.publisher_attachments);
 			let mut vector_of_milestones = Vec::new();
@@ -947,7 +973,7 @@ pub mod pallet {
 												let mut vector_of_milestones_for_transfer = Vec::new();
 												for milestone_helper in milestones {
 													let mid = create_milestone_id(project_id, vector_of_milestones.len() as u8);
-													let milestone: Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>> = Milestone::new(mid.clone(), milestone_helper.name, milestone_helper.tags, milestone_helper.cost, milestone_helper.deadline, milestone_helper.publisher_attachments);
+													let milestone: Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>> = Milestone::new(mid.clone(), milestone_helper.name, milestone_helper.tags, milestone_helper.cost.clone(), milestone_helper.deadline, milestone_helper.publisher_attachments);
 													vector_of_milestones.push(milestone.clone());
 													vector_of_milestones_for_transfer.push(milestone);
 													Self::deposit_event(Event::MileStoneCreated(mid,milestone_helper.cost));
@@ -1026,11 +1052,13 @@ pub mod pallet {
 								Some(milestone_vector) => {
 									if milestone_number >= milestone_vector.len() as u8{
 										res = Err(<Error<T>>::InvalidMilestoneId);
-									}else if milestone_vector[milestone_number as usize].status != Status::Open {
-         											res = Err(<Error<T>>::MilestoneNotOpenForBidding);
-         										}else{
-         											milestone_cost = milestone_vector[milestone_number as usize].cost;
-         										}
+									}else{
+										if milestone_vector[milestone_number as usize].status != Status::Open {
+											res = Err(<Error<T>>::MilestoneNotOpenForBidding);
+										}else{
+											milestone_cost = milestone_vector[milestone_number as usize].cost.clone();
+										}
+									}
 								},
 								None => res = Err(<Error<T>>::InvalidMilestoneId)
 							};
@@ -1073,7 +1101,7 @@ pub mod pallet {
 			let mut milestone_cost: BalanceOf<T> = 0u8.saturated_into();
 			let mut milestone_id_clone = milestone_id.clone();
 			let (milestone_number, project_id) = get_milestone_and_project_id(&mut milestone_id_clone).map_err(|_| <Error<T>>::InvalidMilestoneId)?;
-			let bid_number = bid_number - 1_u32;
+			let bid_number = bid_number - 1 as u32;
 			<ProjectStorage<T>>::try_mutate(&project_id, |option_project| {
 				let mut res = Ok(());
 				// ensuring that the project exist
@@ -1090,24 +1118,26 @@ pub mod pallet {
 								Some(milestone_vector) => {
 									if milestone_number >= milestone_vector.len() as u8 {
 										res = Err(<Error<T>>::InvalidMilestoneId);
-									}else if milestone_vector[milestone_number as usize].status != Status::Open{
-         											res = Err(<Error<T>>::MilestoneNotOpenForBidding);
-         										}else{
-         											// let milestone_key = T::Hashing::hash_of(&milestone_id);
-         											let bidder_list = Self::get_bidder_list(&milestone_id);
-         											if bidder_list.is_empty() || bid_number >= bidder_list.len() as u32{
-         												
-         												res = Err(<Error<T>>::InvalidBidNumber);
-         											}else{
-         												// changing the status of the milestone to in progress
-         												milestone_vector[milestone_number as usize].status = Status::InProgress;
-         												// updating the worker id in the milestone
-         												milestone_vector[milestone_number as usize].worker_id = Some(bidder_list[bid_number as usize].bidder_id.clone());
-         												// updating the worker name in th milestone
-         												milestone_vector[milestone_number as usize].worker_name = Some(bidder_list[bid_number as usize].bidder_name.clone());
-         												milestone_cost = milestone_vector[milestone_number as usize].cost;
-         											}
-         										}
+									}else{
+										if milestone_vector[milestone_number as usize].status != Status::Open{
+											res = Err(<Error<T>>::MilestoneNotOpenForBidding);
+										}else{
+											// let milestone_key = T::Hashing::hash_of(&milestone_id);
+											let bidder_list = Self::get_bidder_list(&milestone_id);
+											if bidder_list.len() == 0 as usize || bid_number >= bidder_list.len() as u32{
+												
+												res = Err(<Error<T>>::InvalidBidNumber);
+											}else{
+												// changing the status of the milestone to in progress
+												milestone_vector[milestone_number as usize].status = Status::InProgress;
+												// updating the worker id in the milestone
+												milestone_vector[milestone_number as usize].worker_id = Some(bidder_list[bid_number as usize].bidder_id.clone());
+												// updating the worker name in th milestone
+												milestone_vector[milestone_number as usize].worker_name = Some(bidder_list[bid_number as usize].bidder_name.clone());
+												milestone_cost = milestone_vector[milestone_number as usize].cost.clone();
+											}
+										}
+									}
 								},
 								None => res = Err(<Error<T>>::InvalidMilestoneId)
 							}
@@ -1160,16 +1190,18 @@ pub mod pallet {
 								Some(milestone_vector) => {
 									if milestone_number >= milestone_vector.len() as u8{
 										res = Err(<Error<T>>::InvalidMilestoneId);
-									}else if milestone_vector[milestone_number as usize].status != Status::InProgress {
-         											res = Err(<Error<T>>::MilestoneNotInProgress);
-									}else if milestone_vector[milestone_number as usize].worker_id.clone().unwrap() != sender {
-										res = Err(<Error<T>>::UnauthorisedToComplete);
 									}else{
-										// updating the worker attachments
-										milestone_vector[milestone_number as usize].worker_attachments = Some(worker_attachments);
-										// updating the status to pending approval
-										milestone_vector[milestone_number as usize].status = Status::PendingApproval;
-										Self::deposit_event(Event::MilestoneCompleted(milestone_id));
+										if milestone_vector[milestone_number as usize].status != Status::InProgress {
+											res = Err(<Error<T>>::MilestoneNotInProgress);
+										}else if milestone_vector[milestone_number as usize].worker_id.clone().unwrap() != sender {
+											res = Err(<Error<T>>::UnauthorisedToComplete);
+										}else{
+											// updating the worker attachments
+											milestone_vector[milestone_number as usize].worker_attachments = Some(worker_attachments);
+											// updating the status to pending approval
+											milestone_vector[milestone_number as usize].status = Status::PendingApproval;
+											Self::deposit_event(Event::MilestoneCompleted(milestone_id));
+										}
 									}
 								},
 								None => res = Err(<Error<T>>::InvalidMilestoneId)
@@ -1211,22 +1243,14 @@ pub mod pallet {
 									if milestone_number >= milestone_vector.len() as u8 {
 										res = Err(<Error<T>>::InvalidMilestoneId);
 									}else{
-										match milestone_vector[milestone_number as usize].status {
-											Status::PendingApproval => {
-												milestone_vector[milestone_number as usize].status = Status::CustomerRatingPending;
-												milestone_vector[milestone_number as usize].final_worker_rating = Some(rating_for_the_worker);
-												Self::deposit_event(<Event<T>>::MilestoneApproved(milestone_id,rating_for_the_worker));
-											},
-											_ => res = Err(<Error<T>>::MilestoneNotPendingApproval),
+										if milestone_vector[milestone_number as usize].status != Status::PendingApproval {
+											res = Err(<Error<T>>::MilestoneNotPendingApproval); 
+										}else{
+											milestone_vector[milestone_number as usize].status = Status::CustomerRatingPending;
+											milestone_vector[milestone_number as usize].final_worker_rating = Some(rating_for_the_worker);
+											Self::deposit_event(Event::MilestoneApproved(milestone_id,rating_for_the_worker));
 										}
 									}
-									// }else if milestone_vector[milestone_number as usize].status != Status::PendingApproval {
-									// 	res = Err(<Error<T>>::MilestoneNotPendingApproval); 
-									// }else{
-									// 	milestone_vector[milestone_number as usize].status = Status::CustomerRatingPending;
-									// 	milestone_vector[milestone_number as usize].final_worker_rating = Some(rating_for_the_worker);
-									// 	Self::deposit_event(Event::MilestoneApproved(milestone_id,rating_for_the_worker));
-									// }
 								},
 								None => res = Err(<Error<T>>::InvalidMilestoneId)
 							};
@@ -1265,15 +1289,19 @@ pub mod pallet {
 								Some(vector_of_milestones) => {
 									if milestone_number >= vector_of_milestones.len() as u8 {
 										res = Err(<Error<T>>::InvalidMilestoneId);
-									}else if vector_of_milestones[milestone_number as usize].status != Status::CustomerRatingPending {
-         											res = Err(<Error<T>>::MilestoneNotPendingRating);
-         										}else if vector_of_milestones[milestone_number as usize].worker_id.clone().unwrap() != sender {
-                   												res = Err(<Error<T>>::UnauthorisedToProvideCustomerRating);
-                   											}else{
-                   												vector_of_milestones[milestone_number as usize].status = Status::CustomerRatingProvided;
-                   												vector_of_milestones[milestone_number as usize].final_customer_rating = Some(rating_for_customer);
-                   												Self::deposit_event(Event::CustomerRatingProvided(milestone_id, rating_for_customer));
-                   											}
+									}else{
+										if vector_of_milestones[milestone_number as usize].status != Status::CustomerRatingPending {
+											res = Err(<Error<T>>::MilestoneNotPendingRating);
+										}else{
+											if vector_of_milestones[milestone_number as usize].worker_id.clone().unwrap() != sender {
+												res = Err(<Error<T>>::UnauthorisedToProvideCustomerRating);
+											}else{
+												vector_of_milestones[milestone_number as usize].status = Status::CustomerRatingProvided;
+												vector_of_milestones[milestone_number as usize].final_customer_rating = Some(rating_for_customer);
+												Self::deposit_event(Event::CustomerRatingProvided(milestone_id, rating_for_customer));
+											}
+										}
+									}
 								},
 								None => res = Err(<Error<T>>::InvalidMilestoneId)
 							}
@@ -1311,19 +1339,21 @@ pub mod pallet {
 								Some(vector_of_milestones) => {
 									if milestone_number >= vector_of_milestones.len() as u8 {
 										res = Err(<Error<T>>::InvalidMilestoneId);
-									}else if vector_of_milestones[milestone_number as usize].status != Status::CustomerRatingProvided {
-         											res = Err(<Error<T>>::CustomerRatingNotProvided);
-         										}else{
-         											vector_of_milestones[milestone_number as usize].status = Status::Completed;
-         											let worker_id = vector_of_milestones[milestone_number as usize].worker_id.clone().unwrap();
-         											// 	// ----- Update overall customer rating
-         											<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
-         												worker_id.clone(),
-         												vector_of_milestones[milestone_number as usize].final_worker_rating.unwrap()
-         											);
-         											// -----
-         											res = Ok(worker_id);
-         										}
+									}else{
+										if vector_of_milestones[milestone_number as usize].status != Status::CustomerRatingProvided {
+											res = Err(<Error<T>>::CustomerRatingNotProvided);
+										}else{
+											vector_of_milestones[milestone_number as usize].status = Status::Completed;
+											let worker_id = vector_of_milestones[milestone_number as usize].worker_id.clone().unwrap();
+											// 	// ----- Update overall customer rating
+											<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
+												worker_id.clone(),
+												vector_of_milestones[milestone_number as usize].final_worker_rating.clone().unwrap()
+											);
+											// -----
+											res = Ok(worker_id);
+										}
+									}
 								},
 								None => res = Err(<Error<T>>::InvalidMilestoneId)
 							}
@@ -1373,20 +1403,20 @@ pub mod pallet {
 											Status::Open => {
 												// reject all the bidders
 												// let milestone_key = T::Hashing::hash_of(&milestone.milestone_id);
-												let milestone_id = milestone.milestone_id.clone();
+												let milestone_id = &milestone.milestone_id.clone();
 												let escrow_id = Self::get_escrow(milestone.milestone_id.clone());
-												let cost = milestone.cost;
+												let cost = milestone.cost.clone();
 												let except = u32::MAX;
 												// transferring publisher's token back to the publisher
 												T::Currency::transfer(
 													&escrow_id,
 													&sender,
-													cost,
+													cost.clone(),
 													ExistenceRequirement::AllowDeath,
 												).ok();
 												// rejecting all the bidder
 												res = Self::reject_all(
-													milestone_id,
+													milestone_id.clone(),
 													escrow_id,
 													cost,
 													except
@@ -1407,7 +1437,7 @@ pub mod pallet {
 										// update publisher rating
 										match publisher_rating {
 											Some(rating) => {
-												project.overall_customer_rating = Some(rating);
+												project.overall_customer_rating = Some(rating.clone());
 												<AccountDetails<BalanceOf<T>>>::update_rating::<T>(sender, rating)
 											},
 											None => (),
@@ -1442,7 +1472,7 @@ pub mod pallet {
 			// Get total balance of sender
 			let sender_account_balance = T::Currency::total_balance(&sender);
 			// Verify if sender's balance is greater than transfer amount
-			let is_valid_to_transfer = sender_account_balance < transfer_amount;
+			let is_valid_to_transfer = sender_account_balance.clone() < transfer_amount.clone();
 			// Is the transfer valid based on the sender's balance
 			ensure!(!is_valid_to_transfer, <Error<T>>::NotEnoughBalance);
 			// Get account balance of receiver
@@ -1460,11 +1490,11 @@ pub mod pallet {
 			// Preparing the transfer details structure
 			let transfer_details = TransferDetails {
 				transfer_from: sender.clone(),
-				from_before: sender_account_balance,
-				from_after: updated_sender_account_balance,
+				from_before: sender_account_balance.clone(),
+				from_after: updated_sender_account_balance.clone(),
 				transfer_to: to.clone(),
-				to_before: to_account_balance,
-				to_after: updated_to_account_balance,
+				to_before: to_account_balance.clone(),
+				to_after: updated_to_account_balance.clone(),
 			};
 			// Updating the vector with transfer details
 			details.push(transfer_details);
@@ -1472,15 +1502,52 @@ pub mod pallet {
 			<Transfers<T>>::put(details);
 			// Notify event
 			Self::deposit_event(Event::TransferMoney(
-				sender,
-				sender_account_balance,
-				updated_sender_account_balance,
-				to,
-				to_account_balance,
-				updated_to_account_balance,
+				sender.clone(),
+				sender_account_balance.clone(),
+				updated_sender_account_balance.clone(),
+				to.clone(),
+				to_account_balance.clone(),
+				updated_to_account_balance.clone(),
 			));
 
 			Ok(())
+		}
+
+		#[pallet::weight(10_000)] // add db weight 
+		pub fn search_milestones(
+			origin: OriginFor<T>,
+			query: SearchDetails<BalanceOf<T>>
+		) -> DispatchResult {
+			// function body starts
+
+			// authentication
+			let _sender = ensure_signed(origin)?;
+			let all_tags = query.tags;
+			let status = query.status;
+			let mut search_result = Vec::new();
+			for (_, project) in <ProjectStorage<T>>::iter() {
+				match project.milestones {
+					None => {},
+					Some(vector_of_milestones) => {
+						for milestone in vector_of_milestones {
+							if Self::compare_status(&milestone, &status) && Self::compare_tags(&milestone, &all_tags) && Self::compare_cost(&milestone, query.minimum_cost, query.maximum_cost) && Self::compare_deadline(&milestone, query.minimum_deadline, query.maximum_deadline) {
+								search_result.push(milestone.clone())
+							}
+						}
+					}
+				}
+			}
+			if search_result.len() > 0 {
+				let length = search_result.len() as u128;
+				<Searches<T>>::insert(&_sender, search_result);
+				Self::deposit_event(Event::SearchSuccessful(_sender, length));
+			}else{ 
+				let empty_result: Vec<Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>>> = Vec::new();
+				<Searches<T>>::insert(&_sender, empty_result);
+				Self::deposit_event(Event::NoResultFound);
+			}
+			Ok(())
+			// function body ends
 		}
 
 	}
@@ -1488,6 +1555,82 @@ pub mod pallet {
 	// Helper functions
 
 	impl<T: Config> Pallet<T> {
+
+		pub fn compare_status(
+			milestone: &Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>>,
+			status: &Status
+		) -> bool{
+			milestone.status == *status
+		}
+
+		pub fn compare_tags(
+			milestone: &Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>>,
+			all_tags: &Vec<TaskTypeTags>
+		) -> bool {
+			if all_tags.len() == 0 {
+				return true;
+			}
+
+			for tag_to_search in all_tags {
+				let mut value = false;
+				for tag in &milestone.tags {
+					if tag_to_search == tag {
+						value = true;
+						break;
+					}
+				} 
+				if value == false {
+					return false;
+				}
+			}
+			true
+		}
+
+		pub fn compare_deadline(
+			milestone: &Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>>,
+			minimum_deadline: Option<u8>,
+			maximum_deadline: Option<u8>
+		) -> bool {
+			let flag_for_minimum;
+			let flag_for_maximum;
+			match minimum_deadline {
+				Some(deadline) => {
+					flag_for_minimum = milestone.deadline >= deadline;
+				},
+				None => flag_for_minimum = true
+			};
+			match maximum_deadline {
+				Some(deadline) => {
+					flag_for_maximum = milestone.deadline <= deadline;
+				},
+				None => flag_for_maximum = true
+			};
+			flag_for_maximum && flag_for_minimum
+		}
+
+		pub fn compare_cost(
+			milestone: &Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>>,
+			minimum_cost: Option<BalanceOf<T>>,
+			maximum_cost: Option<BalanceOf<T>>
+		) -> bool {
+			let flag_for_minimum;
+			let flag_for_maximum;
+			match minimum_cost {
+				Some(cost) => {
+					flag_for_minimum = milestone.cost >= cost;
+				},
+				None => flag_for_minimum = true
+			};
+			match maximum_cost {
+				Some(cost) => {
+					flag_for_maximum = milestone.cost <= cost;
+				},
+				None => flag_for_maximum = true
+			}
+			flag_for_minimum && flag_for_maximum
+		}
+
+
 		pub fn adjourn_court(
 			publisher_id: T::AccountId,
 			milestone: &mut Milestone<T::AccountId, BalanceOf<T>, BlockNumberOf<T>>
@@ -1500,7 +1643,7 @@ pub mod pallet {
 			let milestone_id = milestone.milestone_id.clone();
 			let escrow_id = Self::get_escrow(milestone_id.clone());
 			let mut is_active = true;
-			let task_cost = milestone.cost;
+			let task_cost = milestone.cost.clone();
 			match &mut milestone.dispute {
 				None => (),
 				Some(dispute) => {
@@ -1523,17 +1666,12 @@ pub mod pallet {
 						dispute.avg_worker_rating = Some(avg_worker_rating);
 
 						// --------------- Deciding the winner based on votes
-						// if votes_for_customer > votes_for_worker {
-						// 	dispute.winner = Some(UserType::Customer);
-						// }else if votes_for_customer < votes_for_worker {
-						// 	dispute.winner = Some(UserType::Worker);
-						// }else {
-						// 	dispute.winner = None
-						// }
-						match votes_for_customer.cmp(&votes_for_worker) {
-							Ordering::Greater => dispute.winner = Some(UserType::Customer),
-							Ordering::Less => dispute.winner = Some(UserType::Worker),
-							Ordering::Equal => dispute.winner = None
+						if votes_for_customer > votes_for_worker {
+							dispute.winner = Some(UserType::Customer);
+						}else if votes_for_customer < votes_for_worker {
+							dispute.winner = Some(UserType::Worker);
+						}else {
+							dispute.winner = None
 						}
 
 						// ----- Updating the winner a/c id vector with respective publisher & worker ids
@@ -1555,10 +1693,10 @@ pub mod pallet {
 						// Converting the task cost to u128
 						let task_cost_converted = task_cost.saturated_into::<u128>();
 						// Initializing the placeholder
-						
+						let remaining_amount;
 
 						// Court commision calculation
-						let court_fee = (task_cost_converted * 60) / 100_u128;
+						let court_fee = (task_cost_converted * 60) / 100 as u128;
 						// Individual juror fee calculation
 						let juror_fee = (court_fee as u32) / (final_juror_count as u32);
 						// Collecting juror accounts
@@ -1573,7 +1711,7 @@ pub mod pallet {
 							).ok();
 						}
 						// Total amount excluding court fees
-						let remaining_amount = task_cost_converted - court_fee;
+						remaining_amount = task_cost_converted - court_fee;
 						// Convert remaining amount to u32
 						let remaining_amount_converted = remaining_amount as u32;
 						// ---------- Checking if winner is customer or no one
@@ -1598,18 +1736,18 @@ pub mod pallet {
 						).ok();
 
 						// Update final worker rating
-						milestone.final_worker_rating = dispute.avg_worker_rating;
+						milestone.final_worker_rating = dispute.avg_worker_rating.clone();
 						// Update final customer rating
-						milestone.final_customer_rating = dispute.avg_publisher_rating;
+						milestone.final_customer_rating = dispute.avg_publisher_rating.clone();
 
 						// ------- Update overall customer and worker ratings
 						<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
-							publisher_id,
-							milestone.final_customer_rating.unwrap()
+							publisher_id.clone(),
+							milestone.final_customer_rating.clone().unwrap()
 						);
 						<AccountDetails<BalanceOf<T>>>::update_rating::<T>(
-							worker_id,
-							milestone.final_worker_rating.unwrap()
+							worker_id.clone(),
+							milestone.final_worker_rating.clone().unwrap()
 						);
 						// Updating the status
 						milestone.status = Status::Completed;
@@ -1623,8 +1761,8 @@ pub mod pallet {
 						// -------- Case handover to sudo juror
 						dispute.sudo_juror = Some(
 							Self::pick_sudo_juror(
-								publisher_id,
-								worker_id,
+								publisher_id.clone(),
+								worker_id.clone(),
 							)
 						);
 						is_active = false;
@@ -1685,8 +1823,8 @@ pub mod pallet {
 										match &mut vector_of_milestones[milestone_number as usize].dispute {
 											None => res = Err(<Error<T>>::DisputeDoesNotExist),
 											Some(dispute) => dispute.sudo_juror = Some(Self::pick_sudo_juror(
-												publisher_id,
-												worker_id
+												publisher_id.clone(),
+												worker_id.clone()
 											))
 										}
 										hearing.is_active = false;
@@ -1713,14 +1851,14 @@ pub mod pallet {
 										match &mut vector_of_milestones[milestone_number as usize].dispute {
 											None => res = Err(<Error<T>>::DisputeDoesNotExist),
 											Some(dispute) => {
-												let total_votes = dispute.votes_for_worker.unwrap_or(0) + dispute.votes_for_customer.unwrap_or(0);
+												let total_votes = dispute.votes_for_worker.clone().unwrap_or(0) + dispute.votes_for_customer.clone().unwrap_or(0);
 												if total_votes == 0 {
 													hearing.total_case_period += 5u128.saturated_into();
 													hearing.trial_number += 1;
 													//vector_of_milestones[milestone_number as usize].status = Status::DisputeRaised;
-													dispute.total_case_period = hearing.total_case_period;
+													dispute.total_case_period = hearing.total_case_period.clone();
 													dispute.potential_jurors = Self::potential_jurors(hearing.milestone_id.clone());
-													if !dispute.final_jurors.is_empty() {
+													if dispute.final_jurors.len() != 0 {
 														dispute.final_jurors.clear();
 													}
 													call_adjourn_court = false;
@@ -1737,8 +1875,8 @@ pub mod pallet {
 													None => (),
 													Some(dispute) => {
 														dispute.sudo_juror = Some(Self::pick_sudo_juror(
-															publisher_id,
-															worker_id
+															publisher_id.clone(),
+															worker_id.clone()
 														))
 													}
 												}
@@ -1760,22 +1898,21 @@ pub mod pallet {
 			milestone_id: Vec<u8>,
 		) -> Vec<T::AccountId> {
 			// Creating iterator of account map storage
-			// let all_account_details: Vec<(T::AccountId, AccountDetails<BalanceOf<T>>)> = <AccountMap<T>>::iter().collect();
-			let all_account_details = <AccountMap<T>>::iter();
+			let all_account_details: Vec<(T::AccountId, AccountDetails<BalanceOf<T>>)> = <AccountMap<T>>::iter().collect();
 			// Initializing empty vector for storing potential jurors
 			let mut jurors: Vec<T::AccountId> = Vec::new();
-			let mut milestone_id_clone = milestone_id;
+			let mut milestone_id_clone = milestone_id.clone();
 			let (milestone_number, project_id) = get_milestone_and_project_id(&mut milestone_id_clone).unwrap();
 			let publisher = Self::get_project(&project_id).unwrap().publisher;
 			let project_details = Self::get_project(project_id).unwrap();
 			let milestones = project_details.milestones.unwrap();
 			let milestone_details = milestones.get(milestone_number as usize).unwrap();
 			// ----- Collecting all potential jurors based on certain conditions
-			for (acc_id, acc_details) in all_account_details {
+			for (acc_id, acc_details) in all_account_details.into_iter() {
 				if acc_details.avg_rating >= Some(4) && !acc_details.sudo {
 					for milestone_tag in milestone_details.clone().tags.iter() {
 						if acc_details.tags.contains(milestone_tag) 
-						&& acc_id != publisher
+						&& &acc_id != &publisher
 						&& Some(&acc_id) != milestone_details.worker_id.as_ref() {
 							jurors.push(acc_id);
 							break;
@@ -1820,9 +1957,9 @@ pub mod pallet {
 			let mut total_cost: u32 = 0;
 			let mut escrow_list = Vec::new();
 			for milestone in vector_of_milestone {
-				total_cost += milestone.cost.saturated_into::<u32>();
+				total_cost += milestone.cost.clone().saturated_into::<u32>();
 				let escrow_id = Self::get_escrow(milestone.milestone_id.clone());
-				escrow_list.push((milestone.cost, escrow_id));
+				escrow_list.push((milestone.cost.clone(), escrow_id));
 			}
 			if T::Currency::free_balance(&publisher) < total_cost.into() {
 				return Err(<Error<T>>::NotEnoughBalance);
@@ -1831,7 +1968,7 @@ pub mod pallet {
 				T::Currency::transfer(
 					&publisher,
 					&escrow_id,
-					cost,
+					cost.clone(),
 					ExistenceRequirement::KeepAlive
 				).map_err(|_| <Error<T>>::NotEnoughBalance)?;
 			}
@@ -1847,7 +1984,7 @@ pub mod pallet {
 			milestone_id: Vec<u8>
 		) -> (BlockNumberOf<T>, BlockNumberOf<T>) {
 			// One era is one day
-			const ONE_ERA: u32 = 5;
+			const ONE_ERA: u32 = 15;
 			// Time span for participant to become jurors
 			let start_case_period = <frame_system::Pallet<T>>::block_number();
 			// Total case time
@@ -1871,12 +2008,12 @@ pub mod pallet {
 
 		// helper function to reject the other biddings and transfer the locked funds back to the bidders
 		pub fn reject_all(
-			milestone_key: Vec<u8>,
+			milestone_id: Vec<u8>,
 			escrow_id: T::AccountId,
 			cost: BalanceOf<T>,
 			except: u32
 		)-> Result<(), Error<T>>{
-			let bidder_list = Self::get_bidder_list(milestone_key.clone());
+			let bidder_list = Self::get_bidder_list(&milestone_id);
 			for (index, bidder) in bidder_list.iter().enumerate() {
 				if index as u32 == except {
 					continue;
@@ -1889,7 +2026,7 @@ pub mod pallet {
 					ExistenceRequirement::AllowDeath
 				).map_err(|_| <Error<T>>::FailedToTransferBack)?;
 			}
-			<BidderList<T>>::remove(&milestone_key);
+			<BidderList<T>>::remove(&milestone_id);
 			Ok(())
 		}
 
