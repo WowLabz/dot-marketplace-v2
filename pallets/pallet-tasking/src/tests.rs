@@ -8,10 +8,10 @@ use frame_support::{assert_noop, assert_ok, dispatch::DispatchError,
 pub fn get_milestone_helper() -> MilestoneHelper<BalanceOf<Test>>{
     let some_cost : BalanceOf<Test> = 1000u32.saturated_into();
     let mut tags = Vec::new();
-    let mut publisher_attachments = Vec::new();
+    let publisher_attachments;
     let deadline: u8 = 5;
     tags.push(TaskTypeTags::WebDevelopment);
-    publisher_attachments.push(b"http://aws/publisher.png".to_vec());
+    publisher_attachments = b"http://aws/publisher.png".to_vec();
     MilestoneHelper{
         name: b"milestone".to_vec(),
         cost: some_cost,
@@ -528,7 +528,7 @@ fn it_works_for_completing_a_milestone_with_correct_details() {
             Tasking::milestone_completed(
                 Origin::signed(2),
                 b"1a".to_vec(),
-                vec![b"some attachment".to_vec()]
+                b"some attachment".to_vec()
             )
         );
     });
@@ -579,7 +579,7 @@ fn correct_error_for_completing_the_milestone() {
             Tasking::milestone_completed(
                 Origin::none(),
                 b"1a".to_vec(),
-                vec![b"some attachment".to_vec()]
+                b"http://aws/publisher.png".to_vec()
             ),
             DispatchError::BadOrigin
         );
@@ -587,7 +587,7 @@ fn correct_error_for_completing_the_milestone() {
             Tasking::milestone_completed(
                 Origin::signed(2),
                 b"2a".to_vec(),
-                vec![b"some attachment".to_vec()]
+                b"http://aws/publisher.png".to_vec()
             ),
             Error::<Test>::ProjectDoesNotExist
         );
@@ -595,7 +595,7 @@ fn correct_error_for_completing_the_milestone() {
             Tasking::milestone_completed(
                 Origin::signed(2),
                 b"2a".to_vec(),
-                vec![b"some attachment".to_vec()]
+                b"http://aws/publisher.png".to_vec()
             ),
             Error::<Test>::ProjectDoesNotExist
         );
@@ -603,7 +603,7 @@ fn correct_error_for_completing_the_milestone() {
             Tasking::milestone_completed(
                 Origin::signed(1),
                 b"1a".to_vec(),
-                vec![b"some attachment".to_vec()]
+                b"http://aws/publisher.png".to_vec()
             ),
             Error::<Test>::PublisherCannotCompleteMilestone
         );
@@ -611,7 +611,7 @@ fn correct_error_for_completing_the_milestone() {
             Tasking::milestone_completed(
                 Origin::signed(2),
                 b"1c".to_vec(),
-                vec![b"some attachment".to_vec()]
+                b"http://aws/publisher.png".to_vec()
             ),
             Error::<Test>::InvalidMilestoneId
         );
@@ -619,7 +619,7 @@ fn correct_error_for_completing_the_milestone() {
             Tasking::milestone_completed(
                 Origin::signed(3),
                 b"1a".to_vec(),
-                vec![b"some attachment".to_vec()]
+                b"http://aws/publisher.png".to_vec()
             ),
             Error::<Test>::UnauthorisedToComplete
         );
@@ -671,7 +671,7 @@ fn it_works_for_approving_a_milestone_with_correct_details() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         assert_ok!(
             Tasking::approve_milestone(
@@ -727,7 +727,7 @@ fn correct_error_for_approving_a_milestone(){
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         assert_noop!(
             Tasking::approve_milestone(
@@ -808,7 +808,7 @@ fn it_works_for_disapproving_a_milestone_with_correct_details() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         assert_ok!(
             Tasking::disapprove_milestone(
@@ -863,7 +863,7 @@ fn correct_error_for_disapproving_a_milestone() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         assert_noop!(
             Tasking::disapprove_milestone(
@@ -948,7 +948,7 @@ fn it_works_for_providing_customer_rating_with_correct_details() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1009,7 +1009,7 @@ fn correct_error_for_providing_customer_rating() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1111,7 +1111,7 @@ fn it_works_for_disapproving_the_rating_with_correct_details(){
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1177,7 +1177,7 @@ fn correct_error_for_disapproving_rating() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1327,7 +1327,7 @@ fn it_works_for_accepting_jury_duty_with_correct_details() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1451,7 +1451,7 @@ fn correct_error_for_accepting_jury_duty() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1555,7 +1555,7 @@ fn it_works_for_closing_the_milestone_with_correct_details() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1620,7 +1620,7 @@ fn correct_error_while_closing_the_milestones() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1707,7 +1707,7 @@ fn it_works_for_closing_the_project_with_correct_details() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
@@ -1776,7 +1776,7 @@ fn correct_error_for_closing_the_project() {
         Tasking::milestone_completed(
             Origin::signed(2),
             b"1a".to_vec(),
-            vec![b"some attachment".to_vec()]
+            b"http://aws/publisher.png".to_vec()
         ).unwrap();
         Tasking::approve_milestone(
             Origin::signed(1),
