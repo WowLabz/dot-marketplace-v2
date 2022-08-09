@@ -524,7 +524,7 @@ fn it_works_for_completing_a_milestone_with_correct_details() {
             1
         ).unwrap();
         assert_ok!(
-            Tasking::milestone_completed(
+            Tasking::complete_milestone(
                 Origin::signed(2),
                 b"1a".to_vec(),
                 vec![b"some attachment".to_vec()]
@@ -575,7 +575,7 @@ fn correct_error_for_completing_the_milestone() {
             1
         ).unwrap();
         assert_noop!(
-            Tasking::milestone_completed(
+            Tasking::complete_milestone(
                 Origin::none(),
                 b"1a".to_vec(),
                 vec![b"some attachment".to_vec()]
@@ -583,7 +583,7 @@ fn correct_error_for_completing_the_milestone() {
             DispatchError::BadOrigin
         );
         assert_noop!(
-            Tasking::milestone_completed(
+            Tasking::complete_milestone(
                 Origin::signed(2),
                 b"2a".to_vec(),
                 vec![b"some attachment".to_vec()]
@@ -591,7 +591,7 @@ fn correct_error_for_completing_the_milestone() {
             Error::<Test>::ProjectDoesNotExist
         );
         assert_noop!(
-            Tasking::milestone_completed(
+            Tasking::complete_milestone(
                 Origin::signed(2),
                 b"2a".to_vec(),
                 vec![b"some attachment".to_vec()]
@@ -599,7 +599,7 @@ fn correct_error_for_completing_the_milestone() {
             Error::<Test>::ProjectDoesNotExist
         );
         assert_noop!(
-            Tasking::milestone_completed(
+            Tasking::complete_milestone(
                 Origin::signed(1),
                 b"1a".to_vec(),
                 vec![b"some attachment".to_vec()]
@@ -607,7 +607,7 @@ fn correct_error_for_completing_the_milestone() {
             Error::<Test>::PublisherCannotCompleteMilestone
         );
         assert_noop!(
-            Tasking::milestone_completed(
+            Tasking::complete_milestone(
                 Origin::signed(2),
                 b"1c".to_vec(),
                 vec![b"some attachment".to_vec()]
@@ -615,7 +615,7 @@ fn correct_error_for_completing_the_milestone() {
             Error::<Test>::InvalidMilestoneId
         );
         assert_noop!(
-            Tasking::milestone_completed(
+            Tasking::complete_milestone(
                 Origin::signed(3),
                 b"1a".to_vec(),
                 vec![b"some attachment".to_vec()]
@@ -667,7 +667,7 @@ fn it_works_for_approving_a_milestone_with_correct_details() {
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]
@@ -723,7 +723,7 @@ fn correct_error_for_approving_a_milestone(){
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]
@@ -805,7 +805,7 @@ fn it_works_for_providing_customer_rating_with_correct_details() {
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]
@@ -866,7 +866,7 @@ fn correct_error_for_providing_customer_rating() {
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]
@@ -969,7 +969,7 @@ fn it_works_for_closing_the_milestone_with_correct_details() {
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]
@@ -1034,7 +1034,7 @@ fn correct_error_while_closing_the_milestones() {
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]
@@ -1121,7 +1121,7 @@ fn it_works_for_closing_the_project_with_correct_details() {
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]
@@ -1190,7 +1190,7 @@ fn correct_error_for_closing_the_project() {
             b"1a".to_vec(), 
             1
         ).unwrap();
-        Tasking::milestone_completed(
+        Tasking::complete_milestone(
             Origin::signed(2),
             b"1a".to_vec(),
             vec![b"some attachment".to_vec()]

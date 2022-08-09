@@ -708,7 +708,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(10_000)]
-		pub fn milestone_completed(
+		pub fn complete_milestone(
 			origin: OriginFor<T>,
 			milestone_id: Vec<u8>,
 			worker_attachments: Vec<Vec<u8>>,
