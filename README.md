@@ -33,8 +33,8 @@ The current scope of work involves implementing a **chat feature** between two u
 - The 3 days are divided into 2 parts:
     - Jury acceptance period (14,400 slots/1 day) - This is the period for the potential jurors to accept the jury duty
     - Voting period (28,800 slots/2 days) - This is the time for the jurors to cast their vote. One juror gets only one vote which can be in favor of the customer or service provider (worker)
-After concluding, all the jurors who participated in the case get a commission based on the total cost of the entire task.
-In case of a tie or if no juror votes, the super juror carries out the voting, who will cast a vote based on the work submitted.
+- After concluding, all the jurors who participated in the case get a commission based on the total cost of the entire task.
+- In case of a tie or if no juror votes, the super juror carries out the voting, who will cast a vote based on the work submitted.
 - A user can call the court on the unsatisfactory rating provided by either the customer or the worker.
 
 The flow of the tasking pallet with decentralized court implementation
