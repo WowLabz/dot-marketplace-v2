@@ -12,4 +12,4 @@ services:
       - CARGO_HOME=/var/www/dot-marketplace-v2/.cargo
     volumes:
       - .:/var/www/dot-marketplace-v2
-    command: bash -c "cargo build --release && ./target/release/node-template --dev --ws-external"
+    command: bash -c "cargo build --release && ./target/release/dot_marketplace_node --dev --ws-external"
