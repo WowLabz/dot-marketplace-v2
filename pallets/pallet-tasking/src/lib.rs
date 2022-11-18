@@ -1738,6 +1738,7 @@ pub mod pallet {
 						);
 						// Updating the status
 						milestone.status = Status::Completed;
+						is_active = false;
 						// Notify event
 						Self::deposit_event(
 							Event::CourtAdjourned(
@@ -1858,6 +1859,7 @@ pub mod pallet {
 										if call_adjourn_court {
 											let is_active = Self::adjourn_court(publisher_id.clone(), &mut vector_of_milestones[milestone_number as usize]).unwrap();
 											if !is_active {
+												hearing.is_active = false;
 												match &mut vector_of_milestones[milestone_number as usize].dispute{
 													None => (),
 													Some(dispute) => {
