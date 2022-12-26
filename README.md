@@ -193,7 +193,75 @@ In continuation to previous work, this milestone involves the creation of an on-
 | 4 | Website  | Dedicated one-page website for Dot Marketplace. |
 | 5 | Article | Website article showing motivation behind phase 3 of dot marketplace and how to make the best use of it. |
 
+### Rust Installation
 
+Use Rust's native `cargo` command to build and launch the template node: 
+Note : The current build is supported by Rust Nightly `1.58.0-nightly` due to its dependency on a specific crate used in this codebase.
+Please update the rust version accordingly to run the build.
+
+```sh
+rustup update
+
+# installing rust version 1.58.0-nightly
+rustup install nightly-2021-11-01
+
+# setting rust default version as 1.58.0-nightly
+rustup default nightly-2021-11-01
+
+# run the node
+cargo run --release -- --dev --tmp
+```
+
+### Build
+
+The `cargo run` command will perform an initial build. Use the following command to build the node
+without launching it:
+
+```sh
+cargo build --release
+```
+
+### Tests
+
+Test cases can be run using the following command.
+```sh
+cargo test
+``` 
+
+### Embedded Docs
+
+Once the project has been built, the following command can be used to explore all parameters and
+subcommands:
+
+```sh
+./target/release/dot_marketplace_node -h
+```
+
+## Run
+
+The provided `cargo run` command will launch a temporary node and its state will be discarded after
+you terminate the process. After the project has been built, there are other ways to launch the
+node.
+
+### Single-Node Development Chain
+
+This command will start the single-node development chain with persistent state:
+
+```bash
+./target/release/dot_marketplace_node --dev
+```
+
+Purge the development chain's state:
+
+```bash
+./target/release/dot_marketplace_node purge-chain --dev
+```
+
+Start the development chain with detailed logging:
+
+```bash
+RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/dot_marketplace_node -lruntime=debug --dev
+```
 
 ### **Additional Project Details**
 
