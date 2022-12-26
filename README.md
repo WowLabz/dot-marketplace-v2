@@ -193,7 +193,7 @@ In continuation to previous work, this milestone involves the creation of an on-
 | 4 | Website  | Dedicated one-page website for Dot Marketplace. |
 | 5 | Article | Website article showing motivation behind phase 3 of dot marketplace and how to make the best use of it. |
 
-### Run
+### Rust Run
 
 Use Rust's native `cargo` command to build and launch the template node: 
 Note : The current build is supported by Rust Nightly `1.58.0-nightly` due to its dependency on a specific crate used in this codebase.
