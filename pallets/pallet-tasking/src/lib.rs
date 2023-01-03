@@ -105,7 +105,7 @@ pub mod pallet {
 		pub cost: Balance,
 		pub tags: Vec<TaskTypeTags>,
 		pub deadline: u8,
-		pub publisher_attachments: Vec<Vec<u8>>
+		pub publisher_attachments: Vec<u8>
 	}
 
 	// Struct for Project Description
@@ -149,8 +149,8 @@ pub mod pallet {
 		pub deadline: u8,
 		pub worker_id: Option<AccountId>,
 		pub worker_name: Option<Vec<u8>>,
-		pub publisher_attachments: Option<Vec<Vec<u8>>>,
-		pub worker_attachments: Option<Vec<Vec<u8>>>,
+		pub publisher_attachments: Option<Vec<u8>>,
+		pub worker_attachments: Option<Vec<u8>>,
 		pub dispute: Option<CourtDispute<AccountId, BlockNumber>>,
 		pub final_worker_rating: Option<u8>,
 		pub final_customer_rating: Option<u8>,
@@ -164,7 +164,7 @@ pub mod pallet {
 			tags: Vec<TaskTypeTags>,
 			cost: Balance,
 			deadline: u8,
-			publisher_attachments: Vec<Vec<u8>>,
+			publisher_attachments: Vec<u8>,
 		) -> Self {
 			Milestone{
 				milestone_id,
@@ -1139,7 +1139,7 @@ pub mod pallet {
 		pub fn complete_milestone(
 			origin: OriginFor<T>,
 			milestone_id: Vec<u8>,
-			worker_attachments: Vec<Vec<u8>>,
+			worker_attachments: Vec<u8>,
 		) -> DispatchResult {
 			// function body starts here
 			// authentication
