@@ -188,21 +188,21 @@ fn testnet_genesis(
 			balance: 1 << 60,
 			ratings: [3, 3, 4, 5, 4].to_vec(),
 			avg_rating: Some(4),
-			tags: [TaskTypeTags::MachineLearning].to_vec(),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning, TaskTypeTags::WebDevelopment, TaskTypeTags::CoreBlockchainDevelopment, TaskTypeTags::MobileDevelopment, TaskTypeTags::FullStackDevelopment].to_vec(),
 			sudo: false
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [5, 5, 5, 5, 5].to_vec(),
 			avg_rating: Some(5),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning, TaskTypeTags::WebDevelopment, TaskTypeTags::CoreBlockchainDevelopment, TaskTypeTags::MobileDevelopment, TaskTypeTags::FullStackDevelopment].to_vec(),
 			sudo: true
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [3, 5, 3, 3, 3].to_vec(),
 			avg_rating: Some(3),
-			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
+			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning, TaskTypeTags::WebDevelopment, TaskTypeTags::CoreBlockchainDevelopment, TaskTypeTags::MobileDevelopment, TaskTypeTags::FullStackDevelopment].to_vec(),
 			sudo: true
 		},
 	];
