@@ -1861,7 +1861,7 @@ pub mod pallet {
 						);
 						// Updating the status
 						milestone.status = Status::Completed;
-						is_active = false;
+						// is_active = false;
 						// Notify event
 						Self::deposit_event(Event::CourtAdjourned(milestone_id));
 					} else {
