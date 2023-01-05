@@ -1738,7 +1738,7 @@ pub mod pallet {
 						);
 						// Updating the status
 						milestone.status = Status::Completed;
-						is_active = false;
+						// is_active = false;
 						// Notify event
 						Self::deposit_event(
 							Event::CourtAdjourned(
@@ -1973,7 +1973,7 @@ pub mod pallet {
 			milestone_id: Vec<u8>
 		) -> (BlockNumberOf<T>, BlockNumberOf<T>) {
 			// One era is one day
-			const ONE_ERA: u32 = 15;
+			const ONE_ERA: u32 = 5;
 			// Time span for participant to become jurors
 			let start_case_period = <frame_system::Pallet<T>>::block_number();
 			// Total case time
