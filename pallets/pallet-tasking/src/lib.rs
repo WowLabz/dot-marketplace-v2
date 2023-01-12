@@ -693,7 +693,8 @@ pub mod pallet {
 				// bid vector
 				let bid_number = bidder_vector.len() as u32 + 1;
 				let bid = Bid::new(bid_number, sender.clone(), worker_name, account);
-				previous_bid = check_for_previous_bid::<T>(&bidder_vector, &bid);
+				previous_bid =
+					check_for_previous_bid::<BalanceOf<T>, AccountOf<T>>(&bidder_vector, &bid);
 				if !previous_bid {
 					bidder_vector.push(bid);
 				}
