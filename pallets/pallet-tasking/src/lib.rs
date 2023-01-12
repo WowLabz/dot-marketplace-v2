@@ -530,6 +530,8 @@ pub mod pallet {
 		ProjectNotOpen,
 		/// Raising a dispute for a milestone that has just been open
 		MilestoneJustOpened,
+		/// Rating should be between 0 to 5
+		InvalidRating,
 	}
 
 	#[pallet::hooks]
@@ -553,6 +555,12 @@ pub mod pallet {
 		) -> DispatchResult {
 			// authentication
 			let sender = ensure_signed(origin)?;
+			ensure!(
+				customer_rating >= 0 &&
+					customer_rating <= 5 && worker_rating >= 0 &&
+					worker_rating <= 5,
+				<Error<T>>::InvalidRating
+			);
 			let mut milestone_id_clone = milestone_id.clone();
 			let (milestone_number, project_id) =
 				get_milestone_and_project_id(&mut milestone_id_clone)
@@ -882,6 +890,12 @@ pub mod pallet {
 		) -> DispatchResult {
 			// authentication
 			let sender = ensure_signed(origin)?;
+			ensure!(
+				customer_rating >= 0 &&
+					customer_rating <= 5 && worker_rating >= 0 &&
+					worker_rating <= 5,
+				<Error<T>>::InvalidRating
+			);
 			let mut milestone_id_clone = milestone_id.clone();
 			let (milestone_number, project_id) =
 				get_milestone_and_project_id(&mut milestone_id_clone)
@@ -1399,6 +1413,10 @@ pub mod pallet {
 			// function body starts here
 			// authentication
 			let sender = ensure_signed(origin)?;
+			ensure!(
+				rating_for_the_worker >= 0 && rating_for_the_worker <= 5,
+				<Error<T>>::InvalidRating
+			);
 			let mut milestone_id_clone = milestone_id.clone();
 			let (milestone_number, project_id) =
 				get_milestone_and_project_id(&mut milestone_id_clone)
@@ -1463,6 +1481,10 @@ pub mod pallet {
 			// function body starts here
 			// authentication
 			let sender = ensure_signed(origin)?;
+			ensure!(
+				rating_for_customer >= 0 && rating_for_customer <= 5,
+				<Error<T>>::InvalidRating
+			);
 			let mut milestone_id_clone = milestone_id.clone();
 			let (milestone_number, project_id) =
 				get_milestone_and_project_id(&mut milestone_id_clone)
