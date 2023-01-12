@@ -268,7 +268,7 @@ RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/dot_marketplace_node -lruntime=
 ### **Additional Project Details**
 
 * Technology stack being used
-  * Rust, Substrate, React, Python, Decentralized cloud storage(IPFS)
+  * Rust, Substrate, React, Python, Centralized cloud storage
 
 ### **Future Plans**
 
