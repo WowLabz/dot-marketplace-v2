@@ -5,6 +5,7 @@
 use num_traits::float::Float;
 use sp_std::vec::Vec;
 
+use crate::{pallet::Config, AccountOf, BalanceOf, Bid};
 use codec::alloc::string::{FromUtf8Error, String, ToString};
 
 pub fn create_milestone_id(project_id: u128, milestone_number: u8) -> Vec<u8> {
@@ -48,4 +49,18 @@ pub fn roundoff(total_rating: u8, number_of_users: u8) -> u8 {
 	// -----
 
 	output
+}
+
+pub fn check_for_previous_bid<T: Config>(
+	vector_of_bids: &Vec<Bid<BalanceOf<T>, AccountOf<T>>>,
+	new_bid: &Bid<BalanceOf<T>, AccountOf<T>>,
+) -> bool {
+	let mut res = false;
+	for current_bid in vector_of_bids {
+		if current_bid.bidder_id == new_bid.bidder_id {
+			res = true;
+			break
+		}
+	}
+	res
 }
