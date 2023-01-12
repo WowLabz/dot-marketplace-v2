@@ -1,7 +1,7 @@
 use node_template_runtime::{
-	pallet_tasking::AccountDetails, pallet_tasking::TaskTypeTags, AccountId, AuraConfig, Balance,
-	BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig,
-	PalletTaskingConfig, WASM_BINARY,
+	pallet_tasking::{AccountDetails, TaskTypeTags},
+	AccountId, AuraConfig, Balance, BalancesConfig, GenesisConfig, GrandpaConfig,
+	PalletTaskingConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -154,56 +154,56 @@ fn testnet_genesis(
 			ratings: [3, 5, 4, 2, 4].to_vec(),
 			avg_rating: Some(4),
 			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
+			sudo: false,
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [3, 5, 5, 2, 5].to_vec(),
 			avg_rating: Some(4),
 			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: false
+			sudo: false,
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [4, 4, 4, 4, 4].to_vec(),
 			avg_rating: Some(4),
 			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::WebDevelopment].to_vec(),
-			sudo: false
+			sudo: false,
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [3, 1, 3, 2, 4].to_vec(),
 			avg_rating: Some(3),
 			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::WebDevelopment].to_vec(),
-			sudo: false
+			sudo: false,
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [3, 5, 5, 2, 5].to_vec(),
 			avg_rating: Some(4),
 			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::WebDevelopment].to_vec(),
-			sudo: false
+			sudo: false,
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [3, 3, 4, 5, 4].to_vec(),
 			avg_rating: Some(4),
 			tags: [TaskTypeTags::MachineLearning].to_vec(),
-			sudo: false
+			sudo: false,
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [5, 5, 5, 5, 5].to_vec(),
 			avg_rating: Some(5),
 			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: true
+			sudo: true,
 		},
 		AccountDetails {
 			balance: 1 << 60,
 			ratings: [3, 5, 3, 3, 3].to_vec(),
 			avg_rating: Some(3),
 			tags: [TaskTypeTags::MachineLearning, TaskTypeTags::DeepLearning].to_vec(),
-			sudo: true
+			sudo: true,
 		},
 	];
 
