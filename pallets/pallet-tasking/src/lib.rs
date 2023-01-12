@@ -12,25 +12,20 @@ mod utils;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
-	use frame_support::PalletId;
-    use frame_system::pallet_prelude::*;
 	use frame_support::{
+		pallet_prelude::*,
 		sp_runtime,
 		sp_runtime::traits::{AccountIdConversion, SaturatedConversion},
-		traits::{
-			tokens::ExistenceRequirement, Currency, LockableCurrency,
-		},
-		transactional,
+		traits::{tokens::ExistenceRequirement, Currency, LockableCurrency},
+		transactional, PalletId,
 	};
+	use frame_system::pallet_prelude::*;
 
+	use crate::utils::{create_milestone_id, dot_shuffle, get_milestone_and_project_id, roundoff};
+	use codec::{Decode, Encode};
 	#[cfg(feature = "std")]
 	use frame_support::serde::{Deserialize, Serialize};
-	use codec::{Decode, Encode};
-	use sp_std::collections::btree_map::BTreeMap;
-	use sp_std::vec::Vec;
-	use sp_std::cmp::Ordering;
-	use crate::utils::{dot_shuffle,roundoff, create_milestone_id, get_milestone_and_project_id};
+	use sp_std::{cmp::Ordering, collections::btree_map::BTreeMap, vec::Vec};
 
 	type Item<T> = <T as frame_system::Config>::AccountId;
 	pub type BalanceOf<T> =
