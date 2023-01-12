@@ -268,12 +268,9 @@ RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/dot_marketplace_node -lruntime=
 * Technology stack being used
   * Rust, Substrate, React, Python, centralized cloud storage
 
-### **Future Plans** 
-Future releases of the Dot Marketplace include:
+### **Future Plans**
 
-| Phase | Feature | Description |
-| --- | --- | --- |
-| 4 | Decentralized Storage and Advanced Search| Integration with IPFS or another decentralized storage platform. The Advanced search provides a way to filter projects and milestones based on status (open/in progress/closed) and also based on your tags|
+This is the last phase in our current roadmap. Post this we would focus on partnerships with chains on the dotsama ecosystem for integrating DotMarketplace as their native bounty management tool (this work has already started). If future, if the traction is great, we could create a fresh proposal for an excellent UI or integrate DotMarketplace within PolkaJS Apps itself with native support for multiple tokens besides DOT.
 
 ###
 

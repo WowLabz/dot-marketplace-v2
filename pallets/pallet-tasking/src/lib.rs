@@ -21,7 +21,10 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 
-	use crate::utils::{create_milestone_id, dot_shuffle, get_milestone_and_project_id, roundoff};
+	use crate::utils::{
+		check_for_previous_bid, create_milestone_id, dot_shuffle, get_milestone_and_project_id,
+		roundoff,
+	};
 	use codec::{Decode, Encode};
 	#[cfg(feature = "std")]
 	use frame_support::serde::{Deserialize, Serialize};
@@ -32,6 +35,8 @@ pub mod pallet {
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+
+	pub type AccountOf<T> = <T as frame_system::Config>::AccountId;
 
 	#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -493,9 +498,9 @@ pub mod pallet {
 		UnauthorisedToProvideCustomerRating,
 		/// To check if the sender has sufficient balance for a transfer
 		NotEnoughBalance,
-		// To check if an account is qualified to be a juror
+		/// To check if an account is qualified to be a juror
 		NotPotentialJuror,
-		// To ensure final nuber of jurors does not exceed a certain value
+		/// To ensure final nuber of jurors does not exceed a certain value
 		CannotAddMoreJurors,
 		/// To ensure if the dispute exists in storage
 		DisputeDoesNotExist,
@@ -541,6 +546,8 @@ pub mod pallet {
 		PublisherCannotBid,
 		/// Ensuring that the bid number is valid
 		InvalidBidNumber,
+		/// Worker can only bid once per Milestone
+		BidAlreadyPlaced,
 		/// Something went wrong while transfering from escrow to account id
 		FailedToTransferBack,
 		/// Ensuring that the milestone is in progress
@@ -1254,12 +1261,21 @@ pub mod pallet {
 			);
 			let account = Self::accounts(sender.clone());
 			// let milestone_key = T::Hashing::hash_of(&milestone_id);
+			let mut previous_bid: bool = false;
 			<BidderList<T>>::mutate(&milestone_id, |bidder_vector| {
 				// bid vector
 				let bid_number = bidder_vector.len() as u32 + 1;
 				let bid = Bid::new(bid_number, sender.clone(), worker_name, account);
-				bidder_vector.push(bid);
+				previous_bid =
+					check_for_previous_bid::<BalanceOf<T>, AccountOf<T>>(&bidder_vector, &bid);
+				if !previous_bid {
+					bidder_vector.push(bid);
+				}
 			});
+			match previous_bid {
+				true => Err(<Error<T>>::BidAlreadyPlaced),
+				false => Ok(()),
+			}?;
 			let escrow_id = Self::get_escrow(milestone_id.clone());
 			T::Currency::transfer(
 				&sender,
