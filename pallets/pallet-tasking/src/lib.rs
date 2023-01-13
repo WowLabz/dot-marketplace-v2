@@ -1763,7 +1763,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000)] // add db weight
+		// #[weight = (100_000, DispatchClass::Normal, Pays::No)]
+		#[pallet::weight((10_000, Pays::No))]
 		pub fn search_milestones(
 			origin: OriginFor<T>,
 			query: SearchDetails<BalanceOf<T>>,
