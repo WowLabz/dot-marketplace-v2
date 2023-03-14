@@ -1,281 +1,182 @@
-# Dot Marketplace v3
+# Substrate Node Template
 
-- **Status:** Open
-- **Project Name:** Dot Marketplace
-- **Team Name:** Wow Labz
-- **Payment Address:** 0xF13001401396AA866E8012f31fD939C7E83B8601 (USDT - ERC20)
-- **Level:** 2
+A fresh [Substrate](https://substrate.io/) node, ready for hacking :rocket:
 
-## Project Overview :page_facing_up:
+A standalone version of this template is available  for each release of Polkadot in the [Substrate Developer Hub  Parachain Template](https://github.com/substrate-developer-hub/substrate-parachain-template/) repository.
+The parachain template is generated directly at each Polkadot release branch form the [Node Template in Substreate](https://github.com/paritytech/substrate/tree/master/bin/node-template) upstream
 
-### **Overview**
+It is usually best to to use the stand-alone version to start a new project.
+All bugs, suggestions, and feature requests should be made upstream in the [Substrate](https://github.com/paritytech/substrate/tree/master/bin/node-template) repository.
 
-This is phase 3 of Dot Marketplace, which is a general-purpose decentralized marketplace created as a Substrate pallet.
-- Here's a link to the [approved grant proposal for the first phase](https://github.com/w3f/Grants-Program/blob/master/applications/dot_marketplace.md) and [the second phase](https://github.com/w3f/Grants-Program/blob/master/applications/dot_marketplace-phase2.md)
+## Getting Started
 
-- Dot Marketplace can be used by any decentralized project to float projects and invite their community members to execute them for a reward. Its POC was developed during the Polkadot India Buildathon (2021).
-- It would be directly integrated into Polkadot JS Apps, where such marketplaces could create bounties and projects that community members could fulfill.
-- The inspiration for Dot Marketplace emerged from our own needs while building Yoda - a protocol that facilitates decentralized app development leveraging open data. Dot Marketplace would be used to create data, services, and app marketplaces on Yoda, which would motivate us to maintain this project in the long run.
-
-### **Project Details**
-
-The current scope of work involves **milestone-based submissions** in which a project is divided into multiple configurable milestones(min 1 and max 5) to allow parallel or sequential execution.
-
-- This version of the marketplace handles the project by breaking it into several milestones
-- Each project must have at least one milestone and can have a maximum of five milestones (configurable)
-- Each milestone has its independent bidding system where multiple workers can place their bids
-- The publisher can select a bid as per the requirement and ratings of the worker and other criteria that can be added to a user account.
-- A worker can bid for multiple milestones of a single project based on their expertise.
-- A project reaches completion only if all milestones in the project are completed and approved by the publisher.
-- Since all milestones are independent, they can be completed and approved by the publisher irrespective of the overall project status.
-- Based on the requirements, a publisher can add more milestones to a project even after it is pushed to the market, provided the total number of milestones does not exceed 5 (configurable)
-- The [decentralized court](https://github.com/WowLabz/dot-marketplace-v2) implemented in phase 2 is functional for each milestone of a project
-
-
-The flow of tasking pallet with milestone based submission 
-
-
-![Tasking-Court-Flow4 drawio](https://user-images.githubusercontent.com/43837760/160392143-5ce00b53-3bb6-4c87-8fb9-d7fe8c2f0ca1.jpeg)
-
-
-
-Dot Marketplace is being built as a Substrate pallet. It would include boilerplate code that teams can customize as per their requirements. We believe this project has the potential to transform community participation, engagement, and governance in decentralized projects.
-
-### **Repository Hierarchy**
-
-```bash
-node
-├── build.rs
-├── Cargo.toml
-└── src
-    ├── chain_spec.rs
-    ├── cli.rs
-    ├── command.rs
-    ├── lib.rs
-    ├── main.rs
-    ├── rpc.rs
-    └── service.rs
-scripts
-├── docker_run.sh
-└── init.sh
-pallets
-├── pallet-chat
-│   ├── Cargo.toml
-│   ├── README.md
-│   └── src
-│       ├── benchmarking.rs
-│       ├── lib.rs
-│       ├── mock.rs
-│       └── tests.rs
-└── pallet-tasking
-    ├── Cargo.toml
-    ├── README.md
-    └── src
-        ├── benchmarking.rs
-        ├── lib.rs
-        ├── mock.rs
-        ├── utils.rs 
-        └── tests.rs
-runtime
-├── build.rs
-├── Cargo.toml
-└── src
-    └── lib.rs
-```
-
-The current focus is to enhance the existing Substrate pallet and allied code base to get a basic yet functional marketplace up and running.
-
-### **Ecosystem Fit**
-
-We believe this work could be helpful for any Polkadot para-chains/ para-threads interested in including a marketplace with an on-chain dispute resolution mechanism.
-
-- Almost all para-chains/ para-threads would find motivation in encouraging their community members to contribute meaningfully to their roadmap. This can be achieved by utilizing a marketplace like Dot Marketplace, where technical, marketing, or governance-centric projects can be published as bounties. And community members are invited to bid for and execute them.
-- A milestone-based submission will enhance the functionality of the marketplace and provide a more comprehensive user experience for both the worker and the publisher.
-- The on-chain court will act as a dispute resolution mechanism between users involved in a project. A set of community members meeting specific criteria get to be a part of the jury for the dispute and cast votes, based on which a decision is reached.
-- To facilitate easier communication between a customer and a worker, a one-to-one chat feature is also created.
-
-## **Team 👥**
-
-### **Team members**
-
-- [**Amit Singh**](https://www.linkedin.com/in/startupamit/) [ Product Manager ]
-- [**Roshit Omanakuttan**](https://www.linkedin.com/in/roshit/) [ Technical Architect ]
-- [**Varun Gyanchandani**](https://www.linkedin.com/in/varunsays/) [ Backend Lead ]
-- [**Loakesh Indiran**](https://www.linkedin.com/in/loakesh-indiran-8a2282140) [ Full Stack Developer ]
-- [**Tejas Gaware**](http://www.linkedin.com/in/tejas-vijay-1430a3190) [ Backend Developer ]
-- [**Praneeth Ratnagiri**](https://www.linkedin.com/in/praneeth-ratnagiri-772a43174/) [ Backend Developer ]
-- [**Rajat Petwal**](https://www.linkedin.com/in/rajat-petwal-947440197/) [ Backend Developer ]
-
-### **Contact**
-
-- **Contact Name:** Amit Singh
-- **Contact Email:** amit (dot) singh (@) wowlabz.com
-- **Website:** [http://www.wowlabz.com](https://www.wowlabz.com/)
-- **Project Website:** Dot marketplace website is under construction
-
-### **Legal Structure**
-
-- **Registered Address:** Wow Labz, 2Gethr Cowork, Tower B, Mantri Commercio, Outer Ring Rd, Bellandur, Bengaluru, Karnataka, India 560103
-- **Registered Legal Entity:** Wow Internet Labz Private Limited
-
-### **Team's experience**
-
-Dot Marketplace is being built by the team at Wow Labz. Wow Labz is one of India's leading turnkey product development companies. Socialli Protocol has been conceptualized and is being produced by the team at Wow Labz. The team has previously built a decentralized storage protocol called Lake Network - [https://lakenetwork.io/](https://lakenetwork.io/) in addition to multiple dApps on Ethereum, Stellar, EOS, and Hyperledger.
-
-A list of centralized apps published can be found [here](https://www.wowlabz.com/work/).
-
-### **Team Code Repos**
-
-- [https://github.com/orgs/WowLabz/projects](https://github.com/orgs/WowLabz/projects)
-- [https://github.com/WowLabz/tasking_backend](https://github.com/WowLabz/tasking_backend)
-- [https://github.com/WowLabz/tasking_frontend](https://github.com/WowLabz/tasking_frontend)
-- [https://github.com/WowLabz/yoda_creator_economy_node](https://github.com/WowLabz/yoda_creator_economy_node)
-- [https://github.com/WowLabz/dot-marketplace-v2](https://github.com/WowLabz/dot-marketplace-v2)
-
-## **Development Status 📖**
-
-Dot Marketplace POC was conceptualized and developed during the Polkadot India hackathon. The roadmap listed below comprises new features that would help take the POC to a minimum viable product (MVP). The first stage of the project involved creating a user registration and marketplace based on a bidding system.
-
-- Here's a link to the [approved grant proposal for the first phase](https://github.com/w3f/Grants-Program/blob/master/applications/dot_marketplace.md) and [second phase](https://github.com/w3f/Grants-Program/blob/master/applications/dot_marketplace-phase2.md)
-- We are in touch with Marcin and Raul from the Web 3 Grants and Treasuries team, respectively.
-
-## **Development Roadmap** 🔩
-
-****Overview****
-
-* **Total Estimated Duration:** 4 Weeks
-* **Full-Time Equivalent (FTE): 1.5**  
-* **Total Costs:**  USD
-
-
-### **Milestone 1**
-
-* **Estimated duration:** 1.5 weeks
-* **FTE: 1**  
-* **PTE: 2**  
-* **Costs:**   USD  
-
-The main deliverable for this milestone is to facilitate the creation of a project that can accommodate multiple milestones that may or may not depend on each other.
-
-| Sr no. | Deliverable | Description |
-| --- | --- | --- |
-| 0a | License | Apache 2.0 |
-| 0b | Documentation | We will provide both inline documentation of the code and a tutorial that explains how a user can use DOT Marketplace and understand the flow of tasking pallet. |
-| 0c | Testing Guide | Functions will be covered by unit tests, the documentation will describe how to run these tests. We will also provide scripts to help deploy, run and test the build. |
-| 0d | Docker Image | Docker image of the build |
-| 1 | Project Structure | The existing application only allows one milestone per project. Phase 3 modifies it to allow a publisher to add multiple milestones under the same project |
-| 2 | Multiple Bidders| Multiple bidders can now bid for the same milestone, and the publisher can choose one worker based on the bidder ratings |
-| 3 | Escrow  | Multiple subaccounts are created for a project to account for each milestone and make it easier to store all funds for transfer/exchange. |
-
-
-### **Milestone 2**
-
-* **Estimated duration:** 2.5 weeks
-* **FTE:** 2  
-* **PTE:** 0
-* **Costs:**  USD  
-
-
-In continuation to previous work, this milestone involves the creation of an on-chain decentralized court to handle dispute resolution. Each milestone can go into a dispute on the same scope as mentioned in the second phase of dot marketplace. The other milestones in a project are not affected by the dispute of one of the milestones.
-
-| Sr no. | Deliverable | Description |
-| --- | --- | --- |
-| 0a | License | Apache 2.0 |
-| 0b | Documentation | We will provide both inline documentation of the code and a tutorial that explains how a user can use DOT Marketplace and understand the flow of tasking pallet. |
-| 0c | Testing Guide | Functions will be covered by unit tests, the documentation will describe how to run these tests. We will also provide scripts to help deploy, run and test the build. |
-| 0d | Docker Image | Docker image of the build |
-| 1 | Decentralized Court Module | An on-chain decentralized court for dispute resolution within the ecosystem. |
-| 1a | Disapprove Milestone  | In the case of a customer not being satisfied with the work submitted by the service provider (worker). A set of jurors is shortlisted (court summon) to resolve the dispute and pass a verdict. |
-| 1b | Disapprove Rating | The customer or the service provider, once they have received their rating for a particular milestone and are not satisfied with it. |
-| 1c | General Dispute | A general dispute function for cases that do not fall under the categories mentioned in 1a and 1b. |
-| 2 | Voting module | Each juror can review the dispute and cast their vote, which also includes their rating for both the customer and the worker. After two days, all the juror votes are counted, and a winner is identified. |
-| 3 | Frontend App  | Supporting frontend UI to test the aforementioned functionality. |
-| 4 | Website  | Dedicated one-page website for Dot Marketplace. |
-| 5 | Article | Website article showing motivation behind phase 3 of dot marketplace and how to make the best use of it. |
-
-### Rust Installation
-
-Use Rust's native `cargo` command to build and launch the template node: 
-Note : The current build is supported by Rust Nightly `1.58.0-nightly` due to its dependency on a specific crate used in this codebase.
-Please update the rust version accordingly to run the build.
-
-```sh
-rustup update
-
-# installing rust version 1.58.0-nightly
-rustup install nightly-2021-11-01
-
-# setting rust default version as 1.58.0-nightly
-rustup default nightly-2021-11-01
-
-# run the node
-cargo run --release -- --dev --tmp
-```
+Depending on your operating system and Rust version, there might be additional packages required to compile this template.
+Check the [Install](https://docs.substrate.io/install/) instructions for your platform for the most common dependencies.
+Alternatively, you can use one of the [alternative installation](#alternatives-installations) options.
 
 ### Build
 
-The `cargo run` command will perform an initial build. Use the following command to build the node
-without launching it:
+Use the following command to build the node without launching it:
 
 ```sh
 cargo build --release
 ```
 
-### Tests
-
-Test cases can be run using the following command.
-```sh
-cargo test
-``` 
-
 ### Embedded Docs
 
-Once the project has been built, the following command can be used to explore all parameters and
-subcommands:
+After you build the project, you can use the following command to explore its parameters and subcommands:
 
 ```sh
-./target/release/dot_marketplace_node -h
+./target/release/node-template -h
 ```
 
-## Run
+You can generate and view the [Rust Docs](https://doc.rust-lang.org/cargo/commands/cargo-doc.html) for this template with this command:
 
-The provided `cargo run` command will launch a temporary node and its state will be discarded after
-you terminate the process. After the project has been built, there are other ways to launch the
-node.
+```sh
+cargo +nightly doc --open
+```
 
 ### Single-Node Development Chain
 
-This command will start the single-node development chain with persistent state:
+The following command starts a single-node development chain that doesn't persist state:
 
-```bash
-./target/release/dot_marketplace_node --dev
+```sh
+./target/release/node-template --dev
 ```
 
-Purge the development chain's state:
+To purge the development chain's state, run the following command:
 
-```bash
-./target/release/dot_marketplace_node purge-chain --dev
+```sh
+./target/release/node-template purge-chain --dev
 ```
 
-Start the development chain with detailed logging:
+To start the development chain with detailed logging, run the following command:
 
-```bash
-RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/dot_marketplace_node -lruntime=debug --dev
+```sh
+RUST_BACKTRACE=1 ./target/release/node-template -ldebug --dev
 ```
 
-### **Additional Project Details**
+Development chains:
 
-* Technology stack being used
-  * Rust, Substrate, React, Python, centralized cloud storage
+- Maintain state in a `tmp` folder while the node is running.
+- Use the **Alice** and **Bob** accounts as default validator authorities.
+- Use the **Alice** account as the default `sudo` account.
+- Are preconfigured with a genesis state (`/node/src/chain_spec.rs`) that includes several prefunded development accounts.
 
-### **Future Plans**
 
-This is the last phase in our current roadmap. Post this we would focus on partnerships with chains on the dotsama ecosystem for integrating DotMarketplace as their native bounty management tool (this work has already started). If future, if the traction is great, we could create a fresh proposal for an excellent UI or integrate DotMarketplace within PolkaJS Apps itself with native support for multiple tokens besides DOT.
+To persist chain state between runs, specify a base path by running a command similar to the following:
 
-###
+```sh
+// Create a folder to use as the db base path
+$ mkdir my-chain-state
 
-## Additional Information :heavy_plus_sign:
+// Use of that folder to store the chain state
+$ ./target/release/node-template --dev --base-path ./my-chain-state/
 
-**How did you hear about the Grants Program?** Web3 Foundation Website, Polkadot India Buildathon 
+// Check the folder structure created inside the base path after running the chain
+$ ls ./my-chain-state
+chains
+$ ls ./my-chain-state/chains/
+dev
+$ ls ./my-chain-state/chains/dev
+db keystore network
+```
 
-* We have been working on this roadmap since we applied for the Web3 grant
+### Connect with Polkadot-JS Apps Front-End
+
+After you start the node template locally, you can interact with it using the hosted version of the [Polkadot/Substrate Portal](https://polkadot.js.org/apps/#/explorer?rpc=ws://localhost:9944) front-end by connecting to the local node endpoint.
+A hosted version is also available on [IPFS (redirect) here](https://dotapps.io/) or [IPNS (direct) here](ipns://dotapps.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer).
+You can also find the source code and instructions for hosting your own instance on the [polkadot-js/apps](https://github.com/polkadot-js/apps) repository.
+
+### Multi-Node Local Testnet
+
+If you want to see the multi-node consensus algorithm in action, see [Simulate a network](https://docs.substrate.io/tutorials/get-started/simulate-network/).
+
+## Template Structure
+
+A Substrate project such as this consists of a number of components that are spread across a few directories.
+
+### Node
+
+A blockchain node is an application that allows users to participate in a blockchain network.
+Substrate-based blockchain nodes expose a number of capabilities:
+
+- Networking: Substrate nodes use the [`libp2p`](https://libp2p.io/) networking stack to allow the
+  nodes in the network to communicate with one another.
+- Consensus: Blockchains must have a way to come to [consensus](https://docs.substrate.io/fundamentals/consensus/) on the state of the network.
+  Substrate makes it possible to supply custom consensus engines and also ships with several consensus mechanisms that have been built on top of [Web3 Foundation research](https://research.web3.foundation/en/latest/polkadot/NPoS/index.html).
+- RPC Server: A remote procedure call (RPC) server is used to interact with Substrate nodes.
+
+There are several files in the `node` directory.
+Take special note of the following:
+
+- [`chain_spec.rs`](./node/src/chain_spec.rs): A [chain specification](https://docs.substrate.io/build/chain-spec/) is a source code file that defines a Substrate chain's initial (genesis) state.
+  Chain specifications are useful for development and testing, and critical when architecting the launch of a production chain.
+  Take note of the `development_config` and `testnet_genesis` functions,.
+  These functions are used to define the genesis state for the local development chain configuration.
+  These functions identify some [well-known accounts](https://docs.substrate.io/reference/command-line-tools/subkey/) and use them to configure the blockchain's initial state.
+- [`service.rs`](./node/src/service.rs): This file defines the node implementation.
+  Take note of the libraries that this file imports and the names of the functions it invokes.
+  In particular, there are references to consensus-related topics, such as the [block finalization and forks](https://docs.substrate.io/fundamentals/consensus/#finalization-and-forks) and other [consensus mechanisms](https://docs.substrate.io/fundamentals/consensus/#default-consensus-models) such as Aura for block authoring and GRANDPA for finality.
+
+
+
+### Runtime
+
+In Substrate, the terms "runtime" and "state transition function" are analogous.
+Both terms refer to the core logic of the blockchain that is responsible for validating blocks and executing the state changes they define.
+The Substrate project in this repository uses [FRAME](https://docs.substrate.io/fundamentals/runtime-development/#frame) to construct a blockchain runtime.
+FRAME allows runtime developers to declare domain-specific logic in modules called "pallets".
+At the heart of FRAME is a helpful [macro language](https://docs.substrate.io/reference/frame-macros/) that makes it easy to create pallets and flexibly compose them to create blockchains that can address [a variety of needs](https://substrate.io/ecosystem/projects/).
+
+Review the [FRAME runtime implementation](./runtime/src/lib.rs) included in this template and note the following:
+
+- This file configures several pallets to include in the runtime.
+  Each pallet configuration is defined by a code block that begins with `impl $PALLET_NAME::Config for Runtime`.
+- The pallets are composed into a single runtime by way of the [`construct_runtime!`](https://crates.parity.io/frame_support/macro.construct_runtime.html) macro, which is part of the core FRAME Support [system](https://docs.substrate.io/reference/frame-pallets/#system-pallets) library.
+
+### Pallets
+
+The runtime in this project is constructed using many FRAME pallets that ship with the [core Substrate repository](https://github.com/paritytech/substrate/tree/master/frame) and a template pallet that is [defined in the `pallets`](./pallets/template/src/lib.rs) directory.
+
+A FRAME pallet is compromised of a number of blockchain primitives:
+
+- Storage: FRAME defines a rich set of powerful [storage abstractions](https://docs.substrate.io/build/runtime-storage/) that makes it easy to use Substrate's efficient key-value database to manage the evolving state of a blockchain.
+- Dispatchables: FRAME pallets define special types of functions that can be invoked (dispatched) from outside of the runtime in order to update its state.
+- Events: Substrate uses [events and errors](https://docs.substrate.io/build/events-and-errors/) to notify users of important changes in the runtime.
+- Errors: When a dispatchable fails, it returns an error.
+- Config: The `Config` configuration interface is used to define the types and parameters upon which a FRAME pallet depends.
+
+## Alternatives Installations
+
+Instead of installing dependencies and building this source directly, consider the following alternatives.
+
+### Nix
+
+Install [nix](https://nixos.org/), and optionally [direnv](https://github.com/direnv/direnv) and [lorri](https://github.com/nix-community/lorri) for a fully plug-and-play experience for setting up the development environment.
+To get all the correct dependencies, activate direnv `direnv allow` and lorri `lorri shell`.
+
+### Docker
+
+First, install [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
+
+Then run the following command to start a single node development chain.
+
+```sh
+./scripts/docker_run.sh
+```
+
+This command compiles the code and starts a local development network.
+You can also replace the default command (`cargo build --release && ./target/release/node-template --dev --ws-external`) by appending your own.
+For example:
+
+```sh
+# Run Substrate node without re-compiling
+./scripts/docker_run.sh ./target/release/node-template --dev --ws-external
+
+# Purge the local dev chain
+./scripts/docker_run.sh ./target/release/node-template purge-chain --dev
+
+# Check whether the code is compilable
+./scripts/docker_run.sh cargo check
+```
