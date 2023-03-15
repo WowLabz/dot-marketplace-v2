@@ -1,14 +1,7 @@
-pub fn add(left: usize, right: usize) -> usize {
-	left + right
-}
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
-mod tests {
-	use super::*;
+// Balance
+pub type Balance = u128;
 
-	#[test]
-	fn it_works() {
-		let result = add(2, 2);
-		assert_eq!(result, 4);
-	}
-}
+// task id
+pub type TaskId = u32;
