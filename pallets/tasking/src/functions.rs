@@ -46,6 +46,10 @@ impl<T: Config> Pallet<T> {
 		ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 
 		let task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		// ensure task is accepting bids
+		ensure!(task.get_status() == TaskStatus::Open, <Error<T>>::NotAllowed);
+
 		// ensure that owner is not the bidder
 		ensure!(!task.check_ownership(&who), <Error<T>>::OwnerCannotBid);
 
@@ -69,6 +73,29 @@ impl<T: Config> Pallet<T> {
 		<BidderList<T>>::insert(task_id, bidder_list);
 
 		Self::deposit_event(Event::<T>::BidPlaced { task_id, bidder: who });
+
+		Ok(())
+	}
+
+	pub fn retract_bid(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
+		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+
+		let task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		let mut bidder_list = <BidderList<T>>::get(task_id);
+
+		ensure!(bidder_list.remove(&who), <Error<T>>::BidDoesNotExist);
+
+		let escrow_account = Self::escrow_account_id(task_id);
+
+		T::Currency::transfer(
+			&escrow_account,
+			&who,
+			task.get_cost(),
+			ExistenceRequirement::KeepAlive,
+		)?;
+
+		Self::deposit_event(Event::<T>::BidRemoved { task_id, bidder: who });
 
 		Ok(())
 	}

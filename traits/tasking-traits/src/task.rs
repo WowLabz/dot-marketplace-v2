@@ -69,6 +69,10 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 		self.cost
 	}
 
+	pub fn get_status(&self) -> TaskStatus {
+		self.status.clone()
+	}
+
 	pub fn update_cost(&mut self, new_cost: Balance) {
 		self.cost = new_cost
 	}

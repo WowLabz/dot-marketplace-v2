@@ -52,6 +52,14 @@ pub mod pallet {
 	pub(super) type BidderList<T: Config> =
 		StorageMap<_, Blake2_128Concat, TaskId, BTreeSet<AccountOf<T>>, ValueQuery>;
 
+	// #[pallet::storage]
+	// pub(super) type AcceptedBid<T: Config> = StorageMap<_, Blake2_128Concat, TaskId, AccountId>;
+
+	// for slashing
+	#[pallet::storage]
+	pub(super) type NextOperationDeadline<T: Config> =
+		StorageMap<_, Blake2_128Concat, TaskId, BlockNumberOf<T>>;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
@@ -62,6 +70,8 @@ pub mod pallet {
 		TaskCreated { task_id: TaskId, owner: AccountOf<T> },
 		/// Bid Placed. [TaskId, Bidder]
 		BidPlaced { task_id: TaskId, bidder: AccountOf<T> },
+		/// Bid retracted/removed/deleted
+		BidRemoved { task_id: TaskId, bidder: AccountOf<T> },
 	}
 
 	// Errors inform users that something went wrong.
@@ -73,6 +83,10 @@ pub mod pallet {
 		OwnerCannotBid,
 		/// Bid already placed
 		BidAlreadyPlaced,
+		/// Operation not allowed
+		NotAllowed,
+		/// Bid does not exist
+		BidDoesNotExist,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -95,6 +109,12 @@ pub mod pallet {
 		pub fn bid_on_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_bid(who, task_id)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn undo_bid(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::retract_bid(who, task_id)
 		}
 	}
 
