@@ -12,10 +12,15 @@ use types::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{pallet_prelude::*, traits::LockableCurrency};
+	use frame_support::{
+		pallet_prelude::*,
+		sp_runtime::traits::{AccountIdConversion, SaturatedConversion},
+		traits::LockableCurrency,
+		PalletId,
+	};
 	use frame_system::pallet_prelude::*;
 
-	use sp_std::vec::Vec;
+	use sp_std::{collections::btree_set::BTreeSet, vec::Vec};
 
 	use tasking_primitives::TaskId;
 	use tasking_traits::task::*;
@@ -31,6 +36,7 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type Currency: LockableCurrency<Self::AccountId>;
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::storage]
@@ -42,18 +48,32 @@ pub mod pallet {
 	pub type TaskStorage<T: Config> =
 		StorageMap<_, Blake2_128Concat, TaskId, Task<AccountOf<T>, BalanceOf<T>, BlockNumberOf<T>>>;
 
+	#[pallet::storage]
+	pub(super) type BidderList<T: Config> =
+		StorageMap<_, Blake2_128Concat, TaskId, BTreeSet<AccountOf<T>>, ValueQuery>;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
+		/// Task Created. [TaskId, Owner]
 		TaskCreated { task_id: TaskId, owner: AccountOf<T> },
+		/// Bid Placed. [TaskId, Bidder]
+		BidPlaced { task_id: TaskId, bidder: AccountOf<T> },
 	}
 
 	// Errors inform users that something went wrong.
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		/// The task does not exist
+		TaskDoesNotExist,
+		/// Onwer cannot bid
+		OwnerCannotBid,
+		/// Bid already placed
+		BidAlreadyPlaced,
+	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
@@ -69,6 +89,18 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_create_task(who, metadata, cost, deadline)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn bid_on_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::do_bid(who, task_id)
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn escrow_account_id(id: TaskId) -> AccountOf<T> {
+			T::PalletId::get().try_into_sub_account(id).unwrap()
 		}
 	}
 }

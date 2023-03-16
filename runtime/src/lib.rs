@@ -37,7 +37,7 @@ pub use frame_support::{
 		},
 		IdentityFee, Weight,
 	},
-	StorageValue,
+	PalletId, StorageValue,
 };
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
@@ -282,9 +282,14 @@ impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+parameter_types! {
+	pub const MyPalletId: PalletId = PalletId(*b"acescrow");
+}
+
 impl pallet_tasking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
+	type PalletId = MyPalletId;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

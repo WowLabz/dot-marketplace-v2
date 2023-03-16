@@ -10,8 +10,14 @@ use sp_std::vec::Vec;
 pub enum TaskStatus {
 	// The task is Open
 	Open,
+	//Awaiting Bidder Response
+	AwaitingBidderResponse,
 	// The task is in progress
 	InProgress,
+	//Pending Approval from Publisher
+	PendingApproval,
+	//Customer Rating Pending
+	CustomerRatingPending,
 	// The task is completed
 	Completed,
 }
@@ -30,7 +36,7 @@ pub struct Task<AccountId, Balance, BlockNumber> {
 	worker_attachments: Option<Vec<u8>>,
 }
 
-impl<AccountId: PartialEq, Balance, BlockNumber> Task<AccountId, Balance, BlockNumber> {
+impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, BlockNumber> {
 	pub fn new(
 		owner: AccountId,
 		metadata: Vec<u8>,
@@ -57,6 +63,10 @@ impl<AccountId: PartialEq, Balance, BlockNumber> Task<AccountId, Balance, BlockN
 
 	pub fn extend_completion(&mut self, new_deadline: Option<BlockNumber>) {
 		self.finishes_at = new_deadline
+	}
+
+	pub fn get_cost(&self) -> Balance {
+		self.cost
 	}
 
 	pub fn update_cost(&mut self, new_cost: Balance) {
