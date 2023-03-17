@@ -22,7 +22,7 @@ pub mod pallet {
 
 	use sp_std::{collections::btree_set::BTreeSet, vec::Vec};
 
-	use tasking_primitives::TaskId;
+	use tasking_primitives::{time::DAYS, TaskId};
 	use tasking_traits::task::*;
 
 	#[pallet::pallet]
@@ -52,8 +52,8 @@ pub mod pallet {
 	pub(super) type BidderList<T: Config> =
 		StorageMap<_, Blake2_128Concat, TaskId, BTreeSet<AccountOf<T>>, ValueQuery>;
 
-	// #[pallet::storage]
-	// pub(super) type AcceptedBid<T: Config> = StorageMap<_, Blake2_128Concat, TaskId, AccountId>;
+	#[pallet::storage]
+	pub(super) type AcceptedBid<T: Config> = StorageMap<_, Blake2_128Concat, TaskId, AccountOf<T>>;
 
 	// for slashing
 	#[pallet::storage]
@@ -70,8 +70,14 @@ pub mod pallet {
 		TaskCreated { task_id: TaskId, owner: AccountOf<T> },
 		/// Bid Placed. [TaskId, Bidder]
 		BidPlaced { task_id: TaskId, bidder: AccountOf<T> },
-		/// Bid retracted/removed/deleted
+		/// Bid retracted/removed/deleted. [TaskId, Bidder]
 		BidRemoved { task_id: TaskId, bidder: AccountOf<T> },
+		/// Bid accepted. [TaskId, Bidder]
+		BidAccepted { task_id: TaskId, bidder: AccountOf<T> },
+		/// Work accepted. [TaskId, Bidder]
+		WorkAccepted { task_id: TaskId, bidder: AccountOf<T> },
+		/// Work rejected. [TaskId, Bidder]
+		WorkRejected { task_id: TaskId, bidder: AccountOf<T> },
 	}
 
 	// Errors inform users that something went wrong.
@@ -87,6 +93,8 @@ pub mod pallet {
 		NotAllowed,
 		/// Bid does not exist
 		BidDoesNotExist,
+		/// No Permission
+		NoPermission,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -115,6 +123,31 @@ pub mod pallet {
 		pub fn undo_bid(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::retract_bid(who, task_id)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn accept_bid(
+			origin: OriginFor<T>,
+			task_id: TaskId,
+			bidder: AccountOf<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_accept_bid(who, task_id, bidder)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn accept_work(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_accept_work(who, task_id)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn reject_work(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_reject_work(who, task_id)
 		}
 	}
 

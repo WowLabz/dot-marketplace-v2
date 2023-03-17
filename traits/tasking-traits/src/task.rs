@@ -73,12 +73,20 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 		self.status.clone()
 	}
 
+	pub fn get_deadline(&self) -> u8 {
+		self.deadline
+	}
+
 	pub fn update_cost(&mut self, new_cost: Balance) {
 		self.cost = new_cost
 	}
 
 	pub fn update_status(&mut self, new_status: TaskStatus) {
 		self.status = new_status
+	}
+
+	pub fn add_worker(&mut self, worker: AccountId) {
+		self.worker = Some(worker)
 	}
 
 	pub fn add_worker_attachments(&mut self, attachment_url: Vec<u8>) {
