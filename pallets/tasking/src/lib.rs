@@ -78,6 +78,14 @@ pub mod pallet {
 		WorkAccepted { task_id: TaskId, bidder: AccountOf<T> },
 		/// Work rejected. [TaskId, Bidder]
 		WorkRejected { task_id: TaskId, bidder: AccountOf<T> },
+		/// Task Completed. [TaskId]
+		WorkCompleted { task_id: TaskId, worker: AccountOf<T> },
+		/// Task Approved. [TaskId, WorkerRating]
+		TaskApproved { task_id: TaskId, rating: u8 },
+		/// Customer Rating Provided. [TaskId, CustomerRating]
+		CustomerRatingProvided { task_id: TaskId, rating: u8 },
+		/// Task Completed. [TaskId]
+		TaskCompleted { task_id: TaskId },
 	}
 
 	// Errors inform users that something went wrong.
@@ -95,6 +103,10 @@ pub mod pallet {
 		BidDoesNotExist,
 		/// No Permission
 		NoPermission,
+		/// Not the task worker
+		NotWorker,
+		/// Rating range invalid
+		InvalidRatingInput,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -148,6 +160,90 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			Self::do_reject_work(who, task_id)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn complete_work(
+			origin: OriginFor<T>,
+			task_id: TaskId,
+			worker_attachments: Vec<u8>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_complete_work(who, task_id, worker_attachments)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn approve_task(
+			origin: OriginFor<T>,
+			task_id: TaskId,
+			worker_ratings: u8,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+			let task = <TaskStorage<T>>::get(task_id).unwrap();
+
+			ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
+
+			ensure!(task.get_status() == &TaskStatus::PendingApproval, <Error<T>>::NotAllowed);
+
+			ensure!(worker_ratings >= 1 && worker_ratings <= 5, <Error<T>>::InvalidRatingInput);
+
+			// TODO: rating module
+
+			let mut updated_task = task.clone();
+
+			updated_task.update_status(TaskStatus::CustomerRatingPending);
+
+			<TaskStorage<T>>::insert(task_id, updated_task);
+
+			Self::deposit_event(Event::<T>::TaskApproved { task_id, rating: worker_ratings });
+
+			Ok(())
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn provide_customer_rating(
+			origin: OriginFor<T>,
+			task_id: TaskId,
+			customer_rating: u8,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+			let task = <TaskStorage<T>>::get(task_id).unwrap();
+
+			ensure!(task.get_worker_details() == &Some(who.clone()), <Error<T>>::NoPermission);
+
+			ensure!(
+				task.get_status() == &TaskStatus::CustomerRatingPending,
+				<Error<T>>::NotAllowed
+			);
+
+			ensure!(customer_rating >= 1 && customer_rating <= 5, <Error<T>>::InvalidRatingInput);
+
+			// TODO: rating mmodule
+
+			let mut updated_task = task.clone();
+
+			updated_task.update_status(TaskStatus::AwaitingCompletion);
+
+			<TaskStorage<T>>::insert(task_id, updated_task);
+
+			Self::deposit_event(Event::<T>::CustomerRatingProvided {
+				task_id,
+				rating: customer_rating,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::weight(10_00)]
+		pub fn complete_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_complete_task(who, task_id)
 		}
 	}
 

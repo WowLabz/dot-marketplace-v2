@@ -48,7 +48,7 @@ impl<T: Config> Pallet<T> {
 		let task = <TaskStorage<T>>::get(task_id).unwrap();
 
 		// ensure task is accepting bids
-		ensure!(task.get_status() == TaskStatus::Open, <Error<T>>::NotAllowed);
+		ensure!(task.get_status() == &TaskStatus::Open, <Error<T>>::NotAllowed);
 
 		// ensure that owner is not the bidder
 		ensure!(!task.check_ownership(&who), <Error<T>>::OwnerCannotBid);
@@ -88,7 +88,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
 
 		// // TODO: check if a bid is already pending
-		ensure!(task.get_status() == TaskStatus::Open, <Error<T>>::NotAllowed);
+		ensure!(task.get_status() == &TaskStatus::Open, <Error<T>>::NotAllowed);
 		// ensure!(!(<AcceptedBid<T>>::contains_key(task_id)), <Error<T>>::NotAllowed);
 
 		// get bidder list
@@ -183,6 +183,49 @@ impl<T: Config> Pallet<T> {
 
 		Self::deposit_event(Event::<T>::WorkAccepted { task_id, bidder: who });
 
+		Ok(())
+	}
+
+	pub fn do_complete_work(
+		who: AccountOf<T>,
+		task_id: TaskId,
+		worker_attachments: Vec<u8>,
+	) -> Result<(), DispatchError> {
+		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+		let task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		ensure!(task.get_worker_details() == &Some(who.clone()), <Error<T>>::NotWorker);
+
+		// TODO: deadline slashing logic
+
+		let mut updated_task = task.clone();
+
+		updated_task.update_status(TaskStatus::PendingApproval);
+		updated_task.add_worker_attachments(worker_attachments);
+
+		<TaskStorage<T>>::insert(task_id, updated_task);
+
+		Self::deposit_event(Event::<T>::WorkCompleted { task_id, worker: who });
+
+		Ok(())
+	}
+
+	pub fn do_complete_task(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
+		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
+
+		ensure!(task.get_status() == &TaskStatus::AwaitingCompletion, <Error<T>>::NotAllowed);
+
+		task.update_status(TaskStatus::Completed);
+
+		let escrow_account = Self::escrow_account_id(task_id);
+		let worker = task.get_worker_details().clone().unwrap();
+		let amount = task.get_cost() + task.get_cost();
+		T::Currency::transfer(&who, &worker, amount, ExistenceRequirement::AllowDeath)?;
+
+		Self::deposit_event(Event::<T>::TaskCompleted { task_id });
 		Ok(())
 	}
 

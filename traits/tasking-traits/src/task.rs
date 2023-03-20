@@ -18,6 +18,8 @@ pub enum TaskStatus {
 	PendingApproval,
 	//Customer Rating Pending
 	CustomerRatingPending,
+	// Awating Completion from customer
+	AwaitingCompletion,
 	// The task is completed
 	Completed,
 }
@@ -69,12 +71,16 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 		self.cost
 	}
 
-	pub fn get_status(&self) -> TaskStatus {
-		self.status.clone()
+	pub fn get_status(&self) -> &TaskStatus {
+		&self.status
 	}
 
 	pub fn get_deadline(&self) -> u8 {
 		self.deadline
+	}
+
+	pub fn get_worker_details(&self) -> &Option<AccountId> {
+		&self.worker
 	}
 
 	pub fn update_cost(&mut self, new_cost: Balance) {
