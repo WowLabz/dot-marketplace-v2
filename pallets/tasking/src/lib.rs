@@ -14,7 +14,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::{
 		pallet_prelude::*,
-		sp_runtime::traits::{AccountIdConversion, SaturatedConversion},
+		sp_runtime::traits::{AccountIdConversion},
 		traits::LockableCurrency,
 		PalletId,
 	};
@@ -22,7 +22,7 @@ pub mod pallet {
 
 	use sp_std::{collections::btree_set::BTreeSet, vec::Vec};
 
-	use tasking_primitives::{time::DAYS, TaskId};
+	use tasking_primitives::{TaskId};
 	use tasking_traits::task::*;
 
 	#[pallet::pallet]

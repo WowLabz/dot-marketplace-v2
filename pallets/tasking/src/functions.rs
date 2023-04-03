@@ -2,11 +2,10 @@ use super::*;
 
 use frame_support::{
 	ensure,
-	sp_runtime::{DispatchError, DispatchResult},
+	sp_runtime::{DispatchError},
 	traits::{tokens::ExistenceRequirement, Currency},
-	PalletId,
 };
-use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+
 use sp_std::vec::Vec;
 use tasking_primitives::{time::*, TaskId};
 use tasking_traits::task::*;
@@ -220,7 +219,7 @@ impl<T: Config> Pallet<T> {
 
 		task.update_status(TaskStatus::Completed);
 
-		let escrow_account = Self::escrow_account_id(task_id);
+		let _escrow_account = Self::escrow_account_id(task_id);
 		let worker = task.get_worker_details().clone().unwrap();
 		let amount = task.get_cost() + task.get_cost();
 		T::Currency::transfer(&who, &worker, amount, ExistenceRequirement::AllowDeath)?;

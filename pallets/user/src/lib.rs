@@ -74,7 +74,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(10_000)]
 		pub fn add_tags(origin: OriginFor<T>, tags: Vec<Vec<u8>>) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+			let _who = ensure_signed(origin)?;
 
 			let mut stored_tags = Self::get_tags_from_storage();
 
