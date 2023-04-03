@@ -50,6 +50,7 @@ pub use sp_runtime::{Perbill, Permill};
 pub use pallet_tasking;
 /// Import the template pallet.
 pub use pallet_template;
+pub use pallet_user;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -292,6 +293,10 @@ impl pallet_tasking::Config for Runtime {
 	type PalletId = MyPalletId;
 }
 
+impl pallet_user::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -311,6 +316,7 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		Tasking: pallet_tasking,
+		User: pallet_user,
 	}
 );
 
