@@ -13,17 +13,15 @@ use types::*;
 pub mod pallet {
 	use super::*;
 	use frame_support::{
-		pallet_prelude::*,
-		sp_runtime::traits::{AccountIdConversion},
-		traits::LockableCurrency,
+		pallet_prelude::*, sp_runtime::traits::AccountIdConversion, traits::LockableCurrency,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
 
 	use sp_std::{collections::btree_set::BTreeSet, vec::Vec};
 
-	use tasking_primitives::{TaskId};
-	use tasking_traits::task::*;
+	use tasking_primitives::TaskId;
+	use tasking_traits::{task::*, user::*};
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -37,6 +35,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type Currency: LockableCurrency<Self::AccountId>;
 		type PalletId: Get<PalletId>;
+		type UserTrait: UserTrait<Self::AccountId>;
 	}
 
 	#[pallet::storage]
@@ -190,7 +189,11 @@ pub mod pallet {
 
 			ensure!(worker_ratings >= 1 && worker_ratings <= 5, <Error<T>>::InvalidRatingInput);
 
-			// TODO: rating module
+			let worker_address = task.get_worker_details().clone().unwrap();
+			let mut worker = T::UserTrait::get_user_from_storage(&worker_address);
+			worker.update_worker_rating(worker_ratings);
+
+			T::UserTrait::save_user_to_storage(worker_address, worker);
 
 			let mut updated_task = task.clone();
 
@@ -223,7 +226,10 @@ pub mod pallet {
 
 			ensure!(customer_rating >= 1 && customer_rating <= 5, <Error<T>>::InvalidRatingInput);
 
-			// TODO: rating mmodule
+			let owner_address = task.get_owner_details().clone();
+			let mut owner = T::UserTrait::get_user_from_storage(&owner_address);
+			owner.update_publisher_rating(customer_rating);
+			T::UserTrait::save_user_to_storage(owner_address, owner);
 
 			let mut updated_task = task.clone();
 

@@ -64,7 +64,7 @@ impl User {
 				Some(p_rating) => self.overall_rating = Some(p_rating),
 			},
 			Some(w_rating) => match self.rating_as_publisher {
-				None => self.overall_rating = None,
+				None => self.overall_rating = Some(w_rating),
 				Some(p_rating) => self.overall_rating = Some((w_rating + p_rating) / 2),
 			},
 		}

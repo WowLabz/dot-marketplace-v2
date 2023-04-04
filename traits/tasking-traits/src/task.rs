@@ -83,6 +83,10 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 		&self.worker
 	}
 
+	pub fn get_owner_details(&self) -> &AccountId {
+		&self.owner
+	}
+
 	pub fn update_cost(&mut self, new_cost: Balance) {
 		self.cost = new_cost
 	}

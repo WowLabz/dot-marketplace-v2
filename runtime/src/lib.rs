@@ -291,6 +291,7 @@ impl pallet_tasking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type PalletId = MyPalletId;
+	type UserTrait = User;
 }
 
 impl pallet_user::Config for Runtime {
