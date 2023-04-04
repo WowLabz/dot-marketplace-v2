@@ -73,6 +73,8 @@ pub mod pallet {
 		BidRemoved { task_id: TaskId, bidder: AccountOf<T> },
 		/// Bid accepted. [TaskId, Bidder]
 		BidAccepted { task_id: TaskId, bidder: AccountOf<T> },
+		/// Bid Rejected. [TaskId, Bidder]
+		BidRejected { task_id: TaskId, bidder: AccountOf<T> },
 		/// Work accepted. [TaskId, Bidder]
 		WorkAccepted { task_id: TaskId, bidder: AccountOf<T> },
 		/// Work rejected. [TaskId, Bidder]
@@ -148,6 +150,17 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(10_000)]
+		pub fn reject_bid(
+			origin: OriginFor<T>,
+			task_id: TaskId,
+			bidder: AccountOf<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_reject_bid(who, task_id, bidder)
+		}
+
+		#[pallet::weight(10_000)]
 		pub fn accept_work(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -180,30 +193,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
-			let task = <TaskStorage<T>>::get(task_id).unwrap();
-
-			ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
-
-			ensure!(task.get_status() == &TaskStatus::PendingApproval, <Error<T>>::NotAllowed);
-
-			ensure!(worker_ratings >= 1 && worker_ratings <= 5, <Error<T>>::InvalidRatingInput);
-
-			let worker_address = task.get_worker_details().clone().unwrap();
-			let mut worker = T::UserTrait::get_user_from_storage(&worker_address);
-			worker.update_worker_rating(worker_ratings);
-
-			T::UserTrait::save_user_to_storage(worker_address, worker);
-
-			let mut updated_task = task.clone();
-
-			updated_task.update_status(TaskStatus::CustomerRatingPending);
-
-			<TaskStorage<T>>::insert(task_id, updated_task);
-
-			Self::deposit_event(Event::<T>::TaskApproved { task_id, rating: worker_ratings });
-
-			Ok(())
+			Self::do_approve_task(who, task_id, worker_ratings)
 		}
 
 		#[pallet::weight(10_000)]
@@ -214,35 +204,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
-			let task = <TaskStorage<T>>::get(task_id).unwrap();
-
-			ensure!(task.get_worker_details() == &Some(who.clone()), <Error<T>>::NoPermission);
-
-			ensure!(
-				task.get_status() == &TaskStatus::CustomerRatingPending,
-				<Error<T>>::NotAllowed
-			);
-
-			ensure!(customer_rating >= 1 && customer_rating <= 5, <Error<T>>::InvalidRatingInput);
-
-			let owner_address = task.get_owner_details().clone();
-			let mut owner = T::UserTrait::get_user_from_storage(&owner_address);
-			owner.update_publisher_rating(customer_rating);
-			T::UserTrait::save_user_to_storage(owner_address, owner);
-
-			let mut updated_task = task.clone();
-
-			updated_task.update_status(TaskStatus::AwaitingCompletion);
-
-			<TaskStorage<T>>::insert(task_id, updated_task);
-
-			Self::deposit_event(Event::<T>::CustomerRatingProvided {
-				task_id,
-				rating: customer_rating,
-			});
-
-			Ok(())
+			Self::do_provide_customer_rating(who, task_id, customer_rating)
 		}
 
 		#[pallet::weight(10_00)]

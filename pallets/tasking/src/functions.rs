@@ -2,13 +2,13 @@ use super::*;
 
 use frame_support::{
 	ensure,
-	sp_runtime::{DispatchError},
+	sp_runtime::DispatchError,
 	traits::{tokens::ExistenceRequirement, Currency},
 };
 
 use sp_std::vec::Vec;
 use tasking_primitives::{time::*, TaskId};
-use tasking_traits::task::*;
+use tasking_traits::{task::*, user::*};
 
 impl<T: Config> Pallet<T> {
 	pub fn do_create_task(
@@ -102,6 +102,48 @@ impl<T: Config> Pallet<T> {
 
 		Self::deposit_event(Event::<T>::BidAccepted { task_id, bidder });
 
+		Ok(())
+	}
+
+	pub fn do_reject_bid(
+		who: AccountOf<T>,
+		task_id: TaskId,
+		bidder: AccountOf<T>,
+	) -> Result<(), DispatchError> {
+		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
+
+		ensure!(
+			task.get_status() == &TaskStatus::Open
+				|| task.get_status() == &TaskStatus::AwaitingBidderResponse,
+			<Error<T>>::NotAllowed
+		);
+
+		let escrow_account = Self::escrow_account_id(task_id);
+		if AcceptedBid::<T>::get(task_id) == Some(bidder.clone()) {
+			task.update_status(TaskStatus::Open);
+			AcceptedBid::<T>::remove(task_id);
+			T::Currency::transfer(
+				&escrow_account,
+				&bidder,
+				task.get_cost(),
+				ExistenceRequirement::KeepAlive,
+			)?;
+			<TaskStorage<T>>::insert(task_id, task);
+		} else {
+			let mut bidder_list = <BidderList<T>>::get(task_id);
+			ensure!(bidder_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
+			T::Currency::transfer(
+				&escrow_account,
+				&bidder,
+				task.get_cost(),
+				ExistenceRequirement::KeepAlive,
+			)?;
+			<BidderList<T>>::insert(task_id, bidder_list);
+		}
+		Self::deposit_event(Event::<T>::BidRejected { task_id, bidder });
 		Ok(())
 	}
 
@@ -205,6 +247,70 @@ impl<T: Config> Pallet<T> {
 		<TaskStorage<T>>::insert(task_id, updated_task);
 
 		Self::deposit_event(Event::<T>::WorkCompleted { task_id, worker: who });
+
+		Ok(())
+	}
+
+	pub fn do_approve_task(
+		who: AccountOf<T>,
+		task_id: TaskId,
+		worker_ratings: u8,
+	) -> Result<(), DispatchError> {
+		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+		let task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
+
+		ensure!(task.get_status() == &TaskStatus::PendingApproval, <Error<T>>::NotAllowed);
+
+		ensure!(worker_ratings >= 1 && worker_ratings <= 5, <Error<T>>::InvalidRatingInput);
+
+		let worker_address = task.get_worker_details().clone().unwrap();
+		let mut worker = T::UserTrait::get_user_from_storage(&worker_address);
+		worker.update_worker_rating(worker_ratings);
+
+		T::UserTrait::save_user_to_storage(worker_address, worker);
+
+		let mut updated_task = task.clone();
+
+		updated_task.update_status(TaskStatus::CustomerRatingPending);
+
+		<TaskStorage<T>>::insert(task_id, updated_task);
+
+		Self::deposit_event(Event::<T>::TaskApproved { task_id, rating: worker_ratings });
+
+		Ok(())
+	}
+
+	pub fn do_provide_customer_rating(
+		who: AccountOf<T>,
+		task_id: TaskId,
+		customer_rating: u8,
+	) -> Result<(), DispatchError> {
+		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+		let task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		ensure!(task.get_worker_details() == &Some(who.clone()), <Error<T>>::NoPermission);
+
+		ensure!(task.get_status() == &TaskStatus::CustomerRatingPending, <Error<T>>::NotAllowed);
+
+		ensure!(customer_rating >= 1 && customer_rating <= 5, <Error<T>>::InvalidRatingInput);
+
+		let owner_address = task.get_owner_details().clone();
+		let mut owner = T::UserTrait::get_user_from_storage(&owner_address);
+		owner.update_publisher_rating(customer_rating);
+		T::UserTrait::save_user_to_storage(owner_address, owner);
+
+		let mut updated_task = task.clone();
+
+		updated_task.update_status(TaskStatus::AwaitingCompletion);
+
+		<TaskStorage<T>>::insert(task_id, updated_task);
+
+		Self::deposit_event(Event::<T>::CustomerRatingProvided {
+			task_id,
+			rating: customer_rating,
+		});
 
 		Ok(())
 	}
