@@ -9,6 +9,8 @@ use sp_std::{collections::btree_set::BTreeSet, vec::Vec};
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct User {
 	pub name: Vec<u8>,
+	pub email: Vec<u8>,
+	pub phone_number: Vec<u8>,
 	rating_as_worker: Option<u8>,
 	rating_as_publisher: Option<u8>,
 	overall_rating: Option<u8>,
@@ -20,6 +22,8 @@ impl Default for User {
 	fn default() -> Self {
 		Self {
 			name: Vec::new(),
+			email: Vec::new(),
+			phone_number: Vec::new(),
 			rating_as_worker: None,
 			rating_as_publisher: None,
 			overall_rating: None,

@@ -93,6 +93,8 @@ pub mod pallet {
 		pub fn update_user(
 			origin: OriginFor<T>,
 			name: Option<Vec<u8>>,
+			email: Option<Vec<u8>>,
+			phone_number: Option<Vec<u8>>,
 			tags: Option<Vec<Vec<u8>>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -102,6 +104,14 @@ pub mod pallet {
 			match name {
 				None => (),
 				Some(user_name) => user.name = user_name,
+			};
+			match email {
+				None => (),
+				Some(user_email) => user.email = user_email,
+			};
+			match phone_number {
+				None => (),
+				Some(user_phone_number) => user.phone_number = user_phone_number,
 			};
 			match tags {
 				None => (),
