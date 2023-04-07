@@ -1,17 +1,13 @@
-version: "3.2"
+version: "3.8"
 
 services:
-  dev:
-    container_name: node-template
-    image: paritytech/ci-linux:production
-    working_dir: /var/www/node-template
+  dotmarketplace-node:
+    image: dotmarketplace-node
+    build:
+        context: .
+        dockerfile: Dockerfile
     ports:
       - "9944:9944"
+      - "9933:9933"
     environment:
-      - CARGO_HOME=/var/www/node-template/.cargo
-    volumes:
-      - .:/var/www/node-template
-      - type: bind
-        source: ./.local
-        target: /root/.local
-    command: bash -c "cargo build --release && ./target/release/node-template --dev --ws-external"
+      - CARGO_HOME=/var/www/dotmarketplace-node/.cargo
