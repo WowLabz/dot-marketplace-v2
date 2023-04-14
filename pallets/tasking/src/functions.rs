@@ -59,16 +59,6 @@ impl<T: Config> Pallet<T> {
 
 		bidder_list.insert(who.clone());
 
-		// escrow logic
-		let escrow_account = Self::escrow_account_id(task_id);
-
-		T::Currency::transfer(
-			&who,
-			&escrow_account,
-			task.get_cost(),
-			ExistenceRequirement::KeepAlive,
-		)?;
-
 		<BidderList<T>>::insert(task_id, bidder_list);
 
 		Self::deposit_event(Event::<T>::BidPlaced { task_id, bidder: who });
@@ -121,26 +111,13 @@ impl<T: Config> Pallet<T> {
 			<Error<T>>::NotAllowed
 		);
 
-		let escrow_account = Self::escrow_account_id(task_id);
 		if AcceptedBid::<T>::get(task_id) == Some(bidder.clone()) {
 			task.update_status(TaskStatus::Open);
 			AcceptedBid::<T>::remove(task_id);
-			T::Currency::transfer(
-				&escrow_account,
-				&bidder,
-				task.get_cost(),
-				ExistenceRequirement::KeepAlive,
-			)?;
 			<TaskStorage<T>>::insert(task_id, task);
 		} else {
 			let mut bidder_list = <BidderList<T>>::get(task_id);
 			ensure!(bidder_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
-			T::Currency::transfer(
-				&escrow_account,
-				&bidder,
-				task.get_cost(),
-				ExistenceRequirement::KeepAlive,
-			)?;
 			<BidderList<T>>::insert(task_id, bidder_list);
 		}
 		Self::deposit_event(Event::<T>::BidRejected { task_id, bidder });
@@ -155,15 +132,6 @@ impl<T: Config> Pallet<T> {
 		let mut bidder_list = <BidderList<T>>::get(task_id);
 
 		ensure!(bidder_list.remove(&who), <Error<T>>::BidDoesNotExist);
-
-		let escrow_account = Self::escrow_account_id(task_id);
-
-		T::Currency::transfer(
-			&escrow_account,
-			&who,
-			task.get_cost(),
-			ExistenceRequirement::KeepAlive,
-		)?;
 
 		Self::deposit_event(Event::<T>::BidRemoved { task_id, bidder: who });
 
@@ -188,10 +156,6 @@ impl<T: Config> Pallet<T> {
 		<AcceptedBid<T>>::remove(task_id);
 
 		<TaskStorage<T>>::insert(task_id, task);
-
-		let escrow_id = Self::escrow_account_id(task_id);
-
-		T::Currency::transfer(&escrow_id, &who, task_cost, ExistenceRequirement::KeepAlive)?;
 
 		Self::deposit_event(Event::<T>::WorkRejected { task_id, bidder: who });
 
@@ -219,6 +183,16 @@ impl<T: Config> Pallet<T> {
 
 		<AcceptedBid<T>>::remove(task_id);
 		<TaskStorage<T>>::insert(task_id, task);
+
+		// escrow logic
+		let escrow_account = Self::escrow_account_id(task_id);
+
+		T::Currency::transfer(
+			&who,
+			&escrow_account,
+			Self::get_bid_amount(),
+			ExistenceRequirement::KeepAlive,
+		)?;
 
 		Self::reject_all_bids(task_id);
 
@@ -327,7 +301,7 @@ impl<T: Config> Pallet<T> {
 
 		let _escrow_account = Self::escrow_account_id(task_id);
 		let worker = task.get_worker_details().clone().unwrap();
-		let amount = task.get_cost() + task.get_cost();
+		let amount = task.get_cost() + Self::get_bid_amount();
 		T::Currency::transfer(&who, &worker, amount, ExistenceRequirement::AllowDeath)?;
 
 		Self::deposit_event(Event::<T>::TaskCompleted { task_id });
@@ -346,16 +320,6 @@ impl<T: Config> Pallet<T> {
 
 		let task = <TaskStorage<T>>::get(task_id).unwrap();
 
-		// first return all locked tokens
-		for bidder in bidder_list.iter() {
-			T::Currency::transfer(
-				&escrow_id,
-				&bidder,
-				task.get_cost(),
-				ExistenceRequirement::KeepAlive,
-			);
-		}
-		// then clear the list
 		bidder_list.clear();
 		<BidderList<T>>::insert(task_id, bidder_list);
 	}

@@ -34,8 +34,13 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type Currency: LockableCurrency<Self::AccountId>;
-		type PalletId: Get<PalletId>;
 		type UserTrait: UserTrait<Self::AccountId>;
+
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
+		#[pallet::constant]
+		type BidAmount: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::storage]
@@ -218,6 +223,10 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn escrow_account_id(id: TaskId) -> AccountOf<T> {
 			T::PalletId::get().try_into_sub_account(id).unwrap()
+		}
+
+		pub fn get_bid_amount() -> BalanceOf<T> {
+			T::BidAmount::get()
 		}
 	}
 }
