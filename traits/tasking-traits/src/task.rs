@@ -16,6 +16,8 @@ pub enum TaskStatus {
 	InProgress,
 	//Pending Approval from Publisher
 	PendingApproval,
+	// Task is in Revision by the worker
+	InRevision,
 	//Customer Rating Pending
 	CustomerRatingPending,
 	// Awating Completion from customer
@@ -34,6 +36,7 @@ pub struct Task<AccountId, Balance, BlockNumber> {
 	created_at: BlockNumber,
 	finishes_at: Option<BlockNumber>,
 	deadline: u8,
+	revisions: u8,
 	worker: Option<AccountId>,
 	worker_attachments: Option<Vec<u8>>,
 }
@@ -54,6 +57,7 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 			created_at,
 			finishes_at: None,
 			deadline,
+			revisions: 0,
 			worker: None,
 			worker_attachments: None,
 		}
@@ -77,6 +81,14 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 
 	pub fn get_deadline(&self) -> u8 {
 		self.deadline
+	}
+
+	pub fn get_revisions(&self) -> u8 {
+		self.revisions
+	}
+
+	pub fn increment_revisions(&mut self) {
+		self.revisions += 1;
 	}
 
 	pub fn get_worker_details(&self) -> &Option<AccountId> {

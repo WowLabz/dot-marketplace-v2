@@ -88,6 +88,8 @@ pub mod pallet {
 		WorkCompleted { task_id: TaskId, worker: AccountOf<T> },
 		/// Task Approved. [TaskId, WorkerRating]
 		TaskApproved { task_id: TaskId, rating: u8 },
+		/// Task Disapproved. [TaskId]
+		TaskDisapproved { task_id: TaskId },
 		/// Customer Rating Provided. [TaskId, CustomerRating]
 		CustomerRatingProvided { task_id: TaskId, rating: u8 },
 		/// Task Completed. [TaskId]
@@ -199,6 +201,13 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			Self::do_approve_task(who, task_id, worker_ratings)
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn disapprove_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_disapprove_task(who, task_id)
 		}
 
 		#[pallet::weight(10_000)]

@@ -127,8 +127,6 @@ impl<T: Config> Pallet<T> {
 	pub fn retract_bid(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 
-		let task = <TaskStorage<T>>::get(task_id).unwrap();
-
 		let mut bidder_list = <BidderList<T>>::get(task_id);
 
 		ensure!(bidder_list.remove(&who), <Error<T>>::BidDoesNotExist);
@@ -148,8 +146,6 @@ impl<T: Config> Pallet<T> {
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 
 		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
-
-		let task_cost = task.get_cost();
 
 		task.update_status(TaskStatus::Open);
 
@@ -210,6 +206,11 @@ impl<T: Config> Pallet<T> {
 		let task = <TaskStorage<T>>::get(task_id).unwrap();
 
 		ensure!(task.get_worker_details() == &Some(who.clone()), <Error<T>>::NotWorker);
+		ensure!(
+			task.get_status() == &TaskStatus::InProgress
+				|| task.get_status() == &TaskStatus::InRevision,
+			<Error<T>>::NotAllowed
+		);
 
 		// TODO: deadline slashing logic
 
@@ -252,6 +253,25 @@ impl<T: Config> Pallet<T> {
 		<TaskStorage<T>>::insert(task_id, updated_task);
 
 		Self::deposit_event(Event::<T>::TaskApproved { task_id, rating: worker_ratings });
+
+		Ok(())
+	}
+
+	pub fn do_disapprove_task(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
+		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
+
+		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
+
+		ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
+
+		ensure!(task.get_status() == &TaskStatus::PendingApproval, <Error<T>>::NotAllowed);
+
+		task.increment_revisions();
+		task.update_status(TaskStatus::InRevision);
+
+		<TaskStorage<T>>::insert(task_id, task);
+
+		Self::deposit_event(Event::<T>::TaskDisapproved { task_id });
 
 		Ok(())
 	}
@@ -315,10 +335,6 @@ impl<T: Config> Pallet<T> {
 
 	pub fn reject_all_bids(task_id: TaskId) {
 		let mut bidder_list = <BidderList<T>>::get(task_id);
-
-		let escrow_id = Self::escrow_account_id(task_id);
-
-		let task = <TaskStorage<T>>::get(task_id).unwrap();
 
 		bidder_list.clear();
 		<BidderList<T>>::insert(task_id, bidder_list);
