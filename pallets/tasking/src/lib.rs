@@ -53,11 +53,12 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, TaskId, Task<AccountOf<T>, BalanceOf<T>, BlockNumberOf<T>>>;
 
 	#[pallet::storage]
-	pub(super) type BidderList<T: Config> =
+	pub(super) type ProposalList<T: Config> =
 		StorageMap<_, Blake2_128Concat, TaskId, BTreeSet<AccountOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	pub(super) type AcceptedBid<T: Config> = StorageMap<_, Blake2_128Concat, TaskId, AccountOf<T>>;
+	pub(super) type AcceptedProposal<T: Config> =
+		StorageMap<_, Blake2_128Concat, TaskId, AccountOf<T>>;
 
 	// for slashing
 	#[pallet::storage]
@@ -134,37 +135,37 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(10_000)]
-		pub fn bid_on_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+		pub fn propose_for_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Self::do_bid(who, task_id)
+			Self::do_propose(who, task_id)
 		}
 
 		#[pallet::weight(10_000)]
-		pub fn undo_bid(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+		pub fn remove_proposal(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Self::retract_bid(who, task_id)
+			Self::retract_proposal(who, task_id)
 		}
 
 		#[pallet::weight(10_000)]
-		pub fn accept_bid(
+		pub fn accept_proposal(
 			origin: OriginFor<T>,
 			task_id: TaskId,
 			bidder: AccountOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			Self::do_accept_bid(who, task_id, bidder)
+			Self::do_accept_proposal(who, task_id, bidder)
 		}
 
 		#[pallet::weight(10_000)]
-		pub fn reject_bid(
+		pub fn reject_proposal(
 			origin: OriginFor<T>,
 			task_id: TaskId,
 			bidder: AccountOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			Self::do_reject_bid(who, task_id, bidder)
+			Self::do_reject_proposal(who, task_id, bidder)
 		}
 
 		#[pallet::weight(10_000)]
@@ -193,21 +194,21 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(10_000)]
-		pub fn approve_task(
+		pub fn approve_work(
 			origin: OriginFor<T>,
 			task_id: TaskId,
 			worker_ratings: u8,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			Self::do_approve_task(who, task_id, worker_ratings)
+			Self::do_approve_work(who, task_id, worker_ratings)
 		}
 
 		#[pallet::weight(10_000)]
-		pub fn disapprove_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
+		pub fn disapprove_work(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			Self::do_disapprove_task(who, task_id)
+			Self::do_disapprove_work(who, task_id)
 		}
 
 		#[pallet::weight(10_000)]

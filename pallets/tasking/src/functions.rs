@@ -40,7 +40,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn do_bid(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
+	pub fn do_propose(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
 		// ensure that the task exist
 		ensure!(<TaskStorage<T>>::contains_key(&task_id), <Error<T>>::TaskDoesNotExist);
 
@@ -52,21 +52,21 @@ impl<T: Config> Pallet<T> {
 		// ensure that owner is not the bidder
 		ensure!(!task.check_ownership(&who), <Error<T>>::OwnerCannotBid);
 
-		let mut bidder_list = <BidderList<T>>::get(task_id);
+		let mut proposal_list = <ProposalList<T>>::get(task_id);
 
 		// check if already bid
-		ensure!(!bidder_list.contains(&who), <Error<T>>::BidAlreadyPlaced);
+		ensure!(!proposal_list.contains(&who), <Error<T>>::BidAlreadyPlaced);
 
-		bidder_list.insert(who.clone());
+		proposal_list.insert(who.clone());
 
-		<BidderList<T>>::insert(task_id, bidder_list);
+		<ProposalList<T>>::insert(task_id, proposal_list);
 
 		Self::deposit_event(Event::<T>::BidPlaced { task_id, bidder: who });
 
 		Ok(())
 	}
 
-	pub fn do_accept_bid(
+	pub fn do_accept_proposal(
 		who: AccountOf<T>,
 		task_id: TaskId,
 		bidder: AccountOf<T>,
@@ -78,24 +78,24 @@ impl<T: Config> Pallet<T> {
 
 		// // TODO: check if a bid is already pending
 		ensure!(task.get_status() == &TaskStatus::Open, <Error<T>>::NotAllowed);
-		// ensure!(!(<AcceptedBid<T>>::contains_key(task_id)), <Error<T>>::NotAllowed);
+		// ensure!(!(<AcceptedProposal<T>>::contains_key(task_id)), <Error<T>>::NotAllowed);
 
 		// get bidder list
-		let mut bidder_list = <BidderList<T>>::get(task_id);
-		ensure!(bidder_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
+		let mut proposal_list = <ProposalList<T>>::get(task_id);
+		ensure!(proposal_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
 
-		<AcceptedBid<T>>::insert(task_id, bidder.clone());
+		<AcceptedProposal<T>>::insert(task_id, bidder.clone());
 		task.update_status(TaskStatus::AwaitingBidderResponse);
 
 		<TaskStorage<T>>::insert(task_id, task);
-		<BidderList<T>>::insert(task_id, bidder_list);
+		<ProposalList<T>>::insert(task_id, proposal_list);
 
 		Self::deposit_event(Event::<T>::BidAccepted { task_id, bidder });
 
 		Ok(())
 	}
 
-	pub fn do_reject_bid(
+	pub fn do_reject_proposal(
 		who: AccountOf<T>,
 		task_id: TaskId,
 		bidder: AccountOf<T>,
@@ -111,25 +111,25 @@ impl<T: Config> Pallet<T> {
 			<Error<T>>::NotAllowed
 		);
 
-		if AcceptedBid::<T>::get(task_id) == Some(bidder.clone()) {
+		if AcceptedProposal::<T>::get(task_id) == Some(bidder.clone()) {
 			task.update_status(TaskStatus::Open);
-			AcceptedBid::<T>::remove(task_id);
+			AcceptedProposal::<T>::remove(task_id);
 			<TaskStorage<T>>::insert(task_id, task);
 		} else {
-			let mut bidder_list = <BidderList<T>>::get(task_id);
-			ensure!(bidder_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
-			<BidderList<T>>::insert(task_id, bidder_list);
+			let mut proposal_list = <ProposalList<T>>::get(task_id);
+			ensure!(proposal_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
+			<ProposalList<T>>::insert(task_id, proposal_list);
 		}
 		Self::deposit_event(Event::<T>::BidRejected { task_id, bidder });
 		Ok(())
 	}
 
-	pub fn retract_bid(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
+	pub fn retract_proposal(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 
-		let mut bidder_list = <BidderList<T>>::get(task_id);
+		let mut proposal_list = <ProposalList<T>>::get(task_id);
 
-		ensure!(bidder_list.remove(&who), <Error<T>>::BidDoesNotExist);
+		ensure!(proposal_list.remove(&who), <Error<T>>::BidDoesNotExist);
 
 		Self::deposit_event(Event::<T>::BidRemoved { task_id, bidder: who });
 
@@ -137,11 +137,11 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn do_reject_work(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
-		ensure!(<AcceptedBid<T>>::contains_key(task_id), <Error<T>>::NotAllowed);
+		ensure!(<AcceptedProposal<T>>::contains_key(task_id), <Error<T>>::NotAllowed);
 
-		let accepted_bid = <AcceptedBid<T>>::get(task_id).unwrap();
+		let accepted_proposal = <AcceptedProposal<T>>::get(task_id).unwrap();
 
-		ensure!(accepted_bid == who, <Error<T>>::NotAllowed);
+		ensure!(accepted_proposal == who, <Error<T>>::NotAllowed);
 
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 
@@ -149,7 +149,7 @@ impl<T: Config> Pallet<T> {
 
 		task.update_status(TaskStatus::Open);
 
-		<AcceptedBid<T>>::remove(task_id);
+		<AcceptedProposal<T>>::remove(task_id);
 
 		<TaskStorage<T>>::insert(task_id, task);
 
@@ -159,11 +159,11 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn do_accept_work(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
-		ensure!(<AcceptedBid<T>>::contains_key(task_id), <Error<T>>::NotAllowed);
+		ensure!(<AcceptedProposal<T>>::contains_key(task_id), <Error<T>>::NotAllowed);
 
-		let accepted_bid = <AcceptedBid<T>>::get(task_id).unwrap();
+		let accepted_proposal = <AcceptedProposal<T>>::get(task_id).unwrap();
 
-		ensure!(accepted_bid == who.clone(), <Error<T>>::NotAllowed);
+		ensure!(accepted_proposal == who.clone(), <Error<T>>::NotAllowed);
 
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
@@ -177,7 +177,7 @@ impl<T: Config> Pallet<T> {
 
 		task.extend_completion(Some(completion));
 
-		<AcceptedBid<T>>::remove(task_id);
+		<AcceptedProposal<T>>::remove(task_id);
 		<TaskStorage<T>>::insert(task_id, task);
 
 		// escrow logic
@@ -190,7 +190,7 @@ impl<T: Config> Pallet<T> {
 			ExistenceRequirement::KeepAlive,
 		)?;
 
-		Self::reject_all_bids(task_id);
+		Self::reject_all_proposals(task_id);
 
 		Self::deposit_event(Event::<T>::WorkAccepted { task_id, bidder: who });
 
@@ -226,7 +226,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn do_approve_task(
+	pub fn do_approve_work(
 		who: AccountOf<T>,
 		task_id: TaskId,
 		worker_ratings: u8,
@@ -257,7 +257,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn do_disapprove_task(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
+	pub fn do_disapprove_work(who: AccountOf<T>, task_id: TaskId) -> Result<(), DispatchError> {
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 
 		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
@@ -333,10 +333,10 @@ impl<T: Config> Pallet<T> {
 		block_number
 	}
 
-	pub fn reject_all_bids(task_id: TaskId) {
-		let mut bidder_list = <BidderList<T>>::get(task_id);
+	pub fn reject_all_proposals(task_id: TaskId) {
+		let mut proposal_list = <ProposalList<T>>::get(task_id);
 
-		bidder_list.clear();
-		<BidderList<T>>::insert(task_id, bidder_list);
+		proposal_list.clear();
+		<ProposalList<T>>::insert(task_id, proposal_list);
 	}
 }
