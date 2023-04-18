@@ -49,19 +49,19 @@ impl<T: Config> Pallet<T> {
 		// ensure task is accepting bids
 		ensure!(task.get_status() == &TaskStatus::Open, <Error<T>>::NotAllowed);
 
-		// ensure that owner is not the bidder
-		ensure!(!task.check_ownership(&who), <Error<T>>::OwnerCannotBid);
+		// ensure that owner is not the proposer
+		ensure!(!task.check_ownership(&who), <Error<T>>::OwnerCannotPropose);
 
 		let mut proposal_list = <ProposalList<T>>::get(task_id);
 
 		// check if already bid
-		ensure!(!proposal_list.contains(&who), <Error<T>>::BidAlreadyPlaced);
+		ensure!(!proposal_list.contains(&who), <Error<T>>::ProposalAlreadySubmitted);
 
 		proposal_list.insert(who.clone());
 
 		<ProposalList<T>>::insert(task_id, proposal_list);
 
-		Self::deposit_event(Event::<T>::BidPlaced { task_id, bidder: who });
+		Self::deposit_event(Event::<T>::ProposalCreated { task_id, user: who });
 
 		Ok(())
 	}
@@ -69,7 +69,7 @@ impl<T: Config> Pallet<T> {
 	pub fn do_accept_proposal(
 		who: AccountOf<T>,
 		task_id: TaskId,
-		bidder: AccountOf<T>,
+		user: AccountOf<T>,
 	) -> Result<(), DispatchError> {
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
@@ -80,17 +80,17 @@ impl<T: Config> Pallet<T> {
 		ensure!(task.get_status() == &TaskStatus::Open, <Error<T>>::NotAllowed);
 		// ensure!(!(<AcceptedProposal<T>>::contains_key(task_id)), <Error<T>>::NotAllowed);
 
-		// get bidder list
+		// get proposal list
 		let mut proposal_list = <ProposalList<T>>::get(task_id);
-		ensure!(proposal_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
+		ensure!(proposal_list.remove(&user), <Error<T>>::ProposalDoesNotExist);
 
-		<AcceptedProposal<T>>::insert(task_id, bidder.clone());
+		<AcceptedProposal<T>>::insert(task_id, user.clone());
 		task.update_status(TaskStatus::AwaitingBidderResponse);
 
 		<TaskStorage<T>>::insert(task_id, task);
 		<ProposalList<T>>::insert(task_id, proposal_list);
 
-		Self::deposit_event(Event::<T>::BidAccepted { task_id, bidder });
+		Self::deposit_event(Event::<T>::ProposalAccepted { task_id, user });
 
 		Ok(())
 	}
@@ -98,7 +98,7 @@ impl<T: Config> Pallet<T> {
 	pub fn do_reject_proposal(
 		who: AccountOf<T>,
 		task_id: TaskId,
-		bidder: AccountOf<T>,
+		user: AccountOf<T>,
 	) -> Result<(), DispatchError> {
 		ensure!(<TaskStorage<T>>::contains_key(task_id), <Error<T>>::TaskDoesNotExist);
 		let mut task = <TaskStorage<T>>::get(task_id).unwrap();
@@ -111,16 +111,16 @@ impl<T: Config> Pallet<T> {
 			<Error<T>>::NotAllowed
 		);
 
-		if AcceptedProposal::<T>::get(task_id) == Some(bidder.clone()) {
+		if AcceptedProposal::<T>::get(task_id) == Some(user.clone()) {
 			task.update_status(TaskStatus::Open);
 			AcceptedProposal::<T>::remove(task_id);
 			<TaskStorage<T>>::insert(task_id, task);
 		} else {
 			let mut proposal_list = <ProposalList<T>>::get(task_id);
-			ensure!(proposal_list.remove(&bidder), <Error<T>>::BidDoesNotExist);
+			ensure!(proposal_list.remove(&user), <Error<T>>::ProposalDoesNotExist);
 			<ProposalList<T>>::insert(task_id, proposal_list);
 		}
-		Self::deposit_event(Event::<T>::BidRejected { task_id, bidder });
+		Self::deposit_event(Event::<T>::ProposalRejected { task_id, user });
 		Ok(())
 	}
 
@@ -129,9 +129,9 @@ impl<T: Config> Pallet<T> {
 
 		let mut proposal_list = <ProposalList<T>>::get(task_id);
 
-		ensure!(proposal_list.remove(&who), <Error<T>>::BidDoesNotExist);
+		ensure!(proposal_list.remove(&who), <Error<T>>::ProposalDoesNotExist);
 
-		Self::deposit_event(Event::<T>::BidRemoved { task_id, bidder: who });
+		Self::deposit_event(Event::<T>::ProposalRemoved { task_id, user: who });
 
 		Ok(())
 	}
@@ -153,7 +153,7 @@ impl<T: Config> Pallet<T> {
 
 		<TaskStorage<T>>::insert(task_id, task);
 
-		Self::deposit_event(Event::<T>::WorkRejected { task_id, bidder: who });
+		Self::deposit_event(Event::<T>::WorkRejected { task_id, user: who });
 
 		Ok(())
 	}
@@ -192,7 +192,7 @@ impl<T: Config> Pallet<T> {
 
 		Self::reject_all_proposals(task_id);
 
-		Self::deposit_event(Event::<T>::WorkAccepted { task_id, bidder: who });
+		Self::deposit_event(Event::<T>::WorkAccepted { task_id, user: who });
 
 		Ok(())
 	}
@@ -252,7 +252,7 @@ impl<T: Config> Pallet<T> {
 
 		<TaskStorage<T>>::insert(task_id, updated_task);
 
-		Self::deposit_event(Event::<T>::TaskApproved { task_id, rating: worker_ratings });
+		Self::deposit_event(Event::<T>::WorkApproved { task_id, rating: worker_ratings });
 
 		Ok(())
 	}
@@ -271,7 +271,7 @@ impl<T: Config> Pallet<T> {
 
 		<TaskStorage<T>>::insert(task_id, task);
 
-		Self::deposit_event(Event::<T>::TaskDisapproved { task_id });
+		Self::deposit_event(Event::<T>::WorkDisapproved { task_id });
 
 		Ok(())
 	}

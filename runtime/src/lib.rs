@@ -285,7 +285,7 @@ impl pallet_template::Config for Runtime {
 
 parameter_types! {
 	pub const MyPalletId: PalletId = PalletId(*b"acescrow");
-	pub const BidAmount: Balance = 10000000000000;
+	pub const SecurityFees: Balance = 10000000000000;
 }
 
 impl pallet_tasking::Config for Runtime {
@@ -293,7 +293,7 @@ impl pallet_tasking::Config for Runtime {
 	type Currency = Balances;
 	type PalletId = MyPalletId;
 	type UserTrait = User;
-	type BidAmount = BidAmount;
+	type SecurityFees = SecurityFees;
 }
 
 impl pallet_user::Config for Runtime {

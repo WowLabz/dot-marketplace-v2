@@ -40,7 +40,7 @@ pub mod pallet {
 		type PalletId: Get<PalletId>;
 
 		#[pallet::constant]
-		type BidAmount: Get<BalanceOf<Self>>;
+		type SecurityFees: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::storage]
@@ -73,24 +73,24 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// Task Created. [TaskId, Owner]
 		TaskCreated { task_id: TaskId, owner: AccountOf<T> },
-		/// Bid Placed. [TaskId, Bidder]
-		BidPlaced { task_id: TaskId, bidder: AccountOf<T> },
-		/// Bid retracted/removed/deleted. [TaskId, Bidder]
-		BidRemoved { task_id: TaskId, bidder: AccountOf<T> },
-		/// Bid accepted. [TaskId, Bidder]
-		BidAccepted { task_id: TaskId, bidder: AccountOf<T> },
-		/// Bid Rejected. [TaskId, Bidder]
-		BidRejected { task_id: TaskId, bidder: AccountOf<T> },
-		/// Work accepted. [TaskId, Bidder]
-		WorkAccepted { task_id: TaskId, bidder: AccountOf<T> },
-		/// Work rejected. [TaskId, Bidder]
-		WorkRejected { task_id: TaskId, bidder: AccountOf<T> },
+		/// Proposal Placed. [TaskId, User]
+		ProposalCreated { task_id: TaskId, user: AccountOf<T> },
+		/// Proposal retracted/removed/deleted. [TaskId, User]
+		ProposalRemoved { task_id: TaskId, user: AccountOf<T> },
+		/// Proposal accepted. [TaskId, User]
+		ProposalAccepted { task_id: TaskId, user: AccountOf<T> },
+		/// Proposal Rejected. [TaskId, User]
+		ProposalRejected { task_id: TaskId, user: AccountOf<T> },
+		/// Work accepted. [TaskId, User]
+		WorkAccepted { task_id: TaskId, user: AccountOf<T> },
+		/// Work rejected. [TaskId, User]
+		WorkRejected { task_id: TaskId, user: AccountOf<T> },
 		/// Task Completed. [TaskId]
 		WorkCompleted { task_id: TaskId, worker: AccountOf<T> },
 		/// Task Approved. [TaskId, WorkerRating]
-		TaskApproved { task_id: TaskId, rating: u8 },
+		WorkApproved { task_id: TaskId, rating: u8 },
 		/// Task Disapproved. [TaskId]
-		TaskDisapproved { task_id: TaskId },
+		WorkDisapproved { task_id: TaskId },
 		/// Customer Rating Provided. [TaskId, CustomerRating]
 		CustomerRatingProvided { task_id: TaskId, rating: u8 },
 		/// Task Completed. [TaskId]
@@ -103,13 +103,13 @@ pub mod pallet {
 		/// The task does not exist
 		TaskDoesNotExist,
 		/// Onwer cannot bid
-		OwnerCannotBid,
-		/// Bid already placed
-		BidAlreadyPlaced,
+		OwnerCannotPropose,
+		/// Proposal already placed
+		ProposalAlreadySubmitted,
 		/// Operation not allowed
 		NotAllowed,
-		/// Bid does not exist
-		BidDoesNotExist,
+		/// Proposal does not exist
+		ProposalDoesNotExist,
 		/// No Permission
 		NoPermission,
 		/// Not the task worker
@@ -150,22 +150,22 @@ pub mod pallet {
 		pub fn accept_proposal(
 			origin: OriginFor<T>,
 			task_id: TaskId,
-			bidder: AccountOf<T>,
+			user: AccountOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			Self::do_accept_proposal(who, task_id, bidder)
+			Self::do_accept_proposal(who, task_id, user)
 		}
 
 		#[pallet::weight(10_000)]
 		pub fn reject_proposal(
 			origin: OriginFor<T>,
 			task_id: TaskId,
-			bidder: AccountOf<T>,
+			user: AccountOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			Self::do_reject_proposal(who, task_id, bidder)
+			Self::do_reject_proposal(who, task_id, user)
 		}
 
 		#[pallet::weight(10_000)]
@@ -236,7 +236,7 @@ pub mod pallet {
 		}
 
 		pub fn get_bid_amount() -> BalanceOf<T> {
-			T::BidAmount::get()
+			T::SecurityFees::get()
 		}
 	}
 }
