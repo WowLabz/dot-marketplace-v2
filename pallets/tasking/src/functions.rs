@@ -315,14 +315,37 @@ impl<T: Config> Pallet<T> {
 
 		ensure!(task.check_ownership(&who), <Error<T>>::NoPermission);
 
-		ensure!(task.get_status() == &TaskStatus::AwaitingCompletion, <Error<T>>::NotAllowed);
+		ensure!(
+			task.get_status() == &TaskStatus::AwaitingCompletion
+				|| task.get_status() == &TaskStatus::Open,
+			<Error<T>>::NotAllowed
+		);
+
+		let _escrow_account = Self::escrow_account_id(task_id);
+
+		if task.get_status() == &TaskStatus::Open {
+			let owner = task.get_owner_details();
+			let amount = task.get_cost();
+			T::Currency::transfer(
+				&_escrow_account,
+				owner,
+				amount,
+				ExistenceRequirement::AllowDeath,
+			)?;
+		} else {
+			let worker = task.get_worker_details().clone().unwrap();
+			let amount = task.get_cost() + Self::get_bid_amount();
+			T::Currency::transfer(
+				&_escrow_account,
+				&worker,
+				amount,
+				ExistenceRequirement::AllowDeath,
+			)?;
+		}
 
 		task.update_status(TaskStatus::Completed);
 
-		let _escrow_account = Self::escrow_account_id(task_id);
-		let worker = task.get_worker_details().clone().unwrap();
-		let amount = task.get_cost() + Self::get_bid_amount();
-		T::Currency::transfer(&who, &worker, amount, ExistenceRequirement::AllowDeath)?;
+		<TaskStorage<T>>::insert(task_id, task);
 
 		Self::deposit_event(Event::<T>::TaskCompleted { task_id });
 		Ok(())
