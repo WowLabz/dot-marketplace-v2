@@ -123,6 +123,7 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(10_000)]
 		pub fn create_task(
 			origin: OriginFor<T>,
@@ -134,18 +135,21 @@ pub mod pallet {
 			Self::do_create_task(who, metadata, cost, deadline)
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(10_000)]
 		pub fn propose_for_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_propose(who, task_id)
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(10_000)]
 		pub fn remove_proposal(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::retract_proposal(who, task_id)
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(10_000)]
 		pub fn accept_proposal(
 			origin: OriginFor<T>,
@@ -157,6 +161,7 @@ pub mod pallet {
 			Self::do_accept_proposal(who, task_id, user)
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(10_000)]
 		pub fn reject_proposal(
 			origin: OriginFor<T>,
@@ -168,6 +173,7 @@ pub mod pallet {
 			Self::do_reject_proposal(who, task_id, user)
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(10_000)]
 		pub fn accept_work(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -175,6 +181,7 @@ pub mod pallet {
 			Self::do_accept_work(who, task_id)
 		}
 
+		#[pallet::call_index(6)]
 		#[pallet::weight(10_000)]
 		pub fn reject_work(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -182,6 +189,7 @@ pub mod pallet {
 			Self::do_reject_work(who, task_id)
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(10_000)]
 		pub fn complete_work(
 			origin: OriginFor<T>,
@@ -193,6 +201,7 @@ pub mod pallet {
 			Self::do_complete_work(who, task_id, worker_attachments)
 		}
 
+		#[pallet::call_index(8)]
 		#[pallet::weight(10_000)]
 		pub fn approve_work(
 			origin: OriginFor<T>,
@@ -204,6 +213,7 @@ pub mod pallet {
 			Self::do_approve_work(who, task_id, worker_ratings)
 		}
 
+		#[pallet::call_index(9)]
 		#[pallet::weight(10_000)]
 		pub fn disapprove_work(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -211,6 +221,7 @@ pub mod pallet {
 			Self::do_disapprove_work(who, task_id)
 		}
 
+		#[pallet::call_index(10)]
 		#[pallet::weight(10_000)]
 		pub fn provide_customer_rating(
 			origin: OriginFor<T>,
@@ -222,6 +233,7 @@ pub mod pallet {
 			Self::do_provide_customer_rating(who, task_id, customer_rating)
 		}
 
+		#[pallet::call_index(11)]
 		#[pallet::weight(10_00)]
 		pub fn complete_task(origin: OriginFor<T>, task_id: TaskId) -> DispatchResult {
 			let who = ensure_signed(origin)?;

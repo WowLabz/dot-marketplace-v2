@@ -72,6 +72,7 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(10_000)]
 		pub fn add_tags(origin: OriginFor<T>, tags: Vec<Vec<u8>>) -> DispatchResult {
 			let _who = ensure_signed(origin)?;
@@ -89,6 +90,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(10_000)]
 		pub fn update_user(
 			origin: OriginFor<T>,
