@@ -6,7 +6,7 @@ use frame_support::{
 	traits::{tokens::ExistenceRequirement, Currency},
 };
 
-use sp_std::vec::Vec;
+use sp_std::{ vec::Vec, collections::btree_set::BTreeSet};
 use tasking_primitives::{time::*, TaskId};
 use tasking_traits::{task::*, user::*};
 
@@ -15,11 +15,19 @@ impl<T: Config> Pallet<T> {
 		who: AccountOf<T>,
 		metadata: Vec<u8>,
 		cost: BalanceOf<T>,
+		tags: BTreeSet<Vec<u8>>,
 		deadline: u8,
 	) -> Result<(), DispatchError> {
 		let task_id = Self::task_id() + 1;
 		let created_at = Self::get_current_block_number();
-		let task = Task::new(who.clone(), metadata, cost, created_at, deadline);
+
+
+		let all_tags = T::TagsTrait::get_tags_from_storage();
+
+		// making sure tags exist in the blockchain
+		for tag in tags.iter() {
+			ensure!(all_tags.contains(tag), Error::<T>::InvalidTagInput);
+		}
 
 		// escrow logic
 		let escrow_account = Self::escrow_account_id(task_id);
@@ -27,10 +35,11 @@ impl<T: Config> Pallet<T> {
 		T::Currency::transfer(
 			&who,
 			&escrow_account,
-			task.get_cost(),
+			cost.clone(),
 			ExistenceRequirement::KeepAlive,
 		)?;
 
+		let task = Task::new(who.clone(), metadata, cost, tags, created_at, deadline);
 		<TaskStorage<T>>::insert(task_id, task);
 
 		<TaskNumber<T>>::set(task_id);

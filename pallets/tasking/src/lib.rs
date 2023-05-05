@@ -35,6 +35,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type Currency: LockableCurrency<Self::AccountId>;
 		type UserTrait: UserTrait<Self::AccountId>;
+		type TagsTrait: TagsTrait;
 
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -116,6 +117,8 @@ pub mod pallet {
 		NotWorker,
 		/// Rating range invalid
 		InvalidRatingInput,
+		/// Invalid Tag provided
+		InvalidTagInput
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -130,9 +133,10 @@ pub mod pallet {
 			metadata: Vec<u8>,
 			cost: BalanceOf<T>,
 			deadline: u8,
+			tags: BTreeSet<Vec<u8>>
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Self::do_create_task(who, metadata, cost, deadline)
+			Self::do_create_task(who, metadata, cost, tags, deadline)
 		}
 
 		#[pallet::call_index(1)]

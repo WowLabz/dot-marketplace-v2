@@ -294,6 +294,7 @@ impl pallet_tasking::Config for Runtime {
 	type PalletId = MyPalletId;
 	type UserTrait = User;
 	type SecurityFees = SecurityFees;
+	type TagsTrait = User;
 }
 
 impl pallet_user::Config for Runtime {

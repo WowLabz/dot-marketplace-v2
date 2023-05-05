@@ -3,7 +3,7 @@ use frame_support::pallet_prelude::TypeInfo;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_std::vec::Vec;
+use sp_std::{vec::Vec, collections::btree_set::BTreeSet};
 
 #[derive(Encode, Decode, PartialEq, Eq, Debug, Clone, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -33,6 +33,7 @@ pub struct Task<AccountId, Balance, BlockNumber> {
 	metadata: Vec<u8>,
 	status: TaskStatus,
 	cost: Balance,
+	tags: BTreeSet<Vec<u8>>,
 	created_at: BlockNumber,
 	finishes_at: Option<BlockNumber>,
 	deadline: u8,
@@ -46,6 +47,7 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 		owner: AccountId,
 		metadata: Vec<u8>,
 		cost: Balance,
+		tags: BTreeSet<Vec<u8>>,
 		created_at: BlockNumber,
 		deadline: u8,
 	) -> Self {
@@ -54,6 +56,7 @@ impl<AccountId: PartialEq, Balance: Copy, BlockNumber> Task<AccountId, Balance, 
 			metadata,
 			status: TaskStatus::Open,
 			cost,
+			tags,
 			created_at,
 			finishes_at: None,
 			deadline,
